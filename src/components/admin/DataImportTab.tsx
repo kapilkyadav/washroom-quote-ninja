@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { FileUp, FileX, FileCheck, Database, Download } from 'lucide-react';
+import { FileUp, FileX, FileCheck, Database, Download, BarChart, ShoppingCart, Mail, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -189,7 +188,5 @@ const DataImportTab = () => {
     </div>
   );
 };
-
-import { BarChart, ShoppingCart } from 'lucide-react';
 
 export default DataImportTab;
