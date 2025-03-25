@@ -1,4 +1,3 @@
-
 import { CalculatorFormData } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,24 +22,21 @@ const CustomerDetailsStep = ({ formData, updateFormData }: CustomerDetailsStepPr
   };
   
   const validatePhone = (phone: string) => {
-    const regex = /^\d{10}$/;
-    return regex.test(phone.replace(/[^\d]/g, ''));
+    const digitsOnly = phone.replace(/\D/g, '');
+    return digitsOnly.length === 10;
   };
   
   const handleInputChange = (field: keyof typeof formData.customerDetails, value: string) => {
-    // Clear previous error
     setErrors(prev => ({ ...prev, [field]: undefined }));
     
-    // Validate input
     if (field === 'email' && value && !validateEmail(value)) {
       setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
     }
     
     if (field === 'phone' && value && !validatePhone(value)) {
-      setErrors(prev => ({ ...prev, phone: 'Please enter a valid 10-digit phone number' }));
+      setErrors(prev => ({ ...prev, phone: 'Please enter a valid 10-digit mobile number' }));
     }
     
-    // Update form data
     const updatedDetails = {
       ...formData.customerDetails,
       [field]: value
@@ -50,19 +46,24 @@ const CustomerDetailsStep = ({ formData, updateFormData }: CustomerDetailsStepPr
   };
   
   const formatPhoneNumber = (value: string) => {
-    const digits = value.replace(/\D/g, '');
+    const digitsOnly = value.replace(/\D/g, '');
+    const limitedDigits = digitsOnly.slice(0, 10);
     
-    if (digits.length <= 3) {
-      return digits;
-    } else if (digits.length <= 6) {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    if (limitedDigits.length === 0) {
+      return '+91 ';
     } else {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+      return `+91 ${limitedDigits}`;
     }
   };
   
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatPhoneNumber(e.target.value);
+    let inputValue = e.target.value;
+    
+    if (!inputValue.startsWith('+91')) {
+      inputValue = '+91 ' + inputValue.replace(/^\+91\s?/, '');
+    }
+    
+    const formattedValue = formatPhoneNumber(inputValue);
     handleInputChange('phone', formattedValue);
   };
   
@@ -101,12 +102,13 @@ const CustomerDetailsStep = ({ formData, updateFormData }: CustomerDetailsStepPr
             <Label htmlFor="phone" className="text-base">Phone Number</Label>
             <Input
               id="phone"
-              placeholder="(123) 456-7890"
-              value={formData.customerDetails.phone}
+              placeholder="+91 "
+              value={formData.customerDetails.phone || '+91 '}
               onChange={handlePhoneChange}
               className="input-field h-12"
             />
             {errors.phone && <p className="text-destructive text-sm">{errors.phone}</p>}
+            <p className="text-xs text-muted-foreground">Enter a 10-digit Indian mobile number</p>
           </div>
           
           <div className="space-y-2">
