@@ -1,10 +1,11 @@
-
 import { useState } from 'react';
-import { FileUp, FileX, FileCheck, Database, Download, BarChart, ShoppingCart, Mail, Package } from 'lucide-react';
+import { FileUp, FileX, FileCheck, Database, Download, BarChart, ShoppingCart, Mail, Package, Link, Spreadsheet, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
 
 const DataImportTab = () => {
   const [activeTab, setActiveTab] = useState('import');
@@ -12,20 +13,27 @@ const DataImportTab = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isExporting, setIsExporting] = useState<{[key: string]: boolean}>({});
-  
+  const [googleSheetUrl, setGoogleSheetUrl] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [lastSyncDate, setLastSyncDate] = useState<string | null>(null);
+  const [connectedSheets, setConnectedSheets] = useState<{name: string, url: string, lastSync: string}[]>([
+    {name: 'Inventory Sheet', url: 'https://docs.google.com/spreadsheets/d/example1', lastSync: '2023-08-10 14:30'},
+    {name: 'Customer Data', url: 'https://docs.google.com/spreadsheets/d/example2', lastSync: '2023-08-12 09:15'}
+  ]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
     }
   };
-  
+
   const handleUpload = () => {
     if (!selectedFile) return;
     
     setIsUploading(true);
     setUploadProgress(0);
     
-    // Simulate upload progress
     const interval = setInterval(() => {
       setUploadProgress(prev => {
         if (prev >= 100) {
@@ -41,15 +49,14 @@ const DataImportTab = () => {
       });
     }, 500);
   };
-  
+
   const handleCancel = () => {
     setSelectedFile(null);
     setIsUploading(false);
     setUploadProgress(0);
   };
-  
+
   const exportSampleTemplate = () => {
-    // Create sample data for CSV
     const headers = ['ID', 'Name', 'Description', 'Category', 'Price', 'Stock'];
     const sampleData = [
       ['1', 'Sample Product 1', 'This is a sample product', 'Category A', '₹1200', '10'],
@@ -57,10 +64,8 @@ const DataImportTab = () => {
       ['3', 'Sample Product 3', 'Yet another sample', 'Category A', '₹2100', '5']
     ];
     
-    // Convert to CSV
     const csv = [headers, ...sampleData].map(row => row.join(',')).join('\n');
     
-    // Create and download the file
     downloadFile(csv, 'import-template.csv', 'text/csv');
     
     toast({
@@ -68,18 +73,16 @@ const DataImportTab = () => {
       description: "Sample import template has been downloaded.",
     });
   };
-  
+
   const exportData = (dataType: string, format: 'csv' | 'excel') => {
     const exportKey = `${dataType}-${format}`;
     setIsExporting({...isExporting, [exportKey]: true});
     
-    // Simulate export delay
     setTimeout(() => {
       let data: string;
       let filename: string;
       let mimeType: string;
       
-      // Generate appropriate data based on type
       if (dataType.includes('Brands')) {
         const headers = ['ID', 'Brand Name', 'Category', 'Products Count', 'Active'];
         const sampleData = [
@@ -125,18 +128,14 @@ const DataImportTab = () => {
         data = [headers, ...sampleData].map(row => row.join(',')).join('\n');
       }
       
-      // Set filename and mime type based on format
       if (format === 'csv') {
         filename = `${dataType.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}-export.csv`;
         mimeType = 'text/csv';
       } else {
-        // For Excel, we'll still use CSV but with .xlsx extension for the demo
-        // In a real app, you'd use a library like xlsx to generate proper Excel files
         filename = `${dataType.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}-export.xlsx`;
         mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       }
       
-      // Download the file
       downloadFile(data, filename, mimeType);
       
       setIsExporting({...isExporting, [exportKey]: false});
@@ -147,28 +146,95 @@ const DataImportTab = () => {
       });
     }, 1500);
   };
-  
+
   const downloadFile = (content: string, filename: string, mimeType: string) => {
-    // Create a blob with the data
     const blob = new Blob([content], { type: mimeType });
     
-    // Create a link element
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
     link.download = filename;
     
-    // Append to the document, click, and remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const handleSheetUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGoogleSheetUrl(e.target.value);
+  };
+
+  const handleConnectSheet = () => {
+    if (!googleSheetUrl) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid Google Sheet URL",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const sheetName = `Sheet ${connectedSheets.length + 1}`;
+    const currentDate = new Date().toISOString().split('T')[0] + ' ' + 
+                         new Date().toTimeString().split(' ')[0].substring(0, 5);
+    
+    const newSheet = {
+      name: sheetName,
+      url: googleSheetUrl,
+      lastSync: currentDate
+    };
+
+    setConnectedSheets([...connectedSheets, newSheet]);
+    setGoogleSheetUrl('');
+    
+    toast({
+      title: "Sheet Connected",
+      description: `Successfully connected to "${sheetName}"`,
+    });
+  };
+
+  const handleSyncSheet = (index: number) => {
+    setIsSyncing(true);
+    setSyncProgress(0);
+    
+    const interval = setInterval(() => {
+      setSyncProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsSyncing(false);
+          
+          const updatedSheets = [...connectedSheets];
+          const currentDate = new Date().toISOString().split('T')[0] + ' ' + 
+                              new Date().toTimeString().split(' ')[0].substring(0, 5);
+          updatedSheets[index].lastSync = currentDate;
+          setConnectedSheets(updatedSheets);
+          setLastSyncDate(currentDate);
+          
+          toast({
+            title: "Sync Complete",
+            description: `Data from "${connectedSheets[index].name}" has been synchronized successfully.`,
+          });
+          
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 400);
+  };
+
+  const handleMappingData = () => {
+    toast({
+      title: "Column Mapping Saved",
+      description: "Your column mapping configuration has been saved.",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="import" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="import">Import Data</TabsTrigger>
           <TabsTrigger value="export">Export Data</TabsTrigger>
+          <TabsTrigger value="sync">Google Sheets</TabsTrigger>
         </TabsList>
         
         <TabsContent value="import" className="mt-6">
@@ -307,6 +373,152 @@ const DataImportTab = () => {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Database size={16} />
                 <span>Last database backup: 14 Aug 2023, 03:45 AM</span>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="sync" className="mt-6">
+          <div className="glass-card p-6 rounded-xl">
+            <h3 className="text-lg font-semibold mb-2">Sync with Google Sheets</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Connect and synchronize data with Google Sheets. Changes made in either system can be synced bidirectionally.
+            </p>
+            
+            <div className="space-y-6">
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-2">Connect a new sheet</h4>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="Paste Google Sheet URL"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={googleSheetUrl}
+                      onChange={handleSheetUrlChange}
+                    />
+                  </div>
+                  <Button onClick={handleConnectSheet} className="whitespace-nowrap">
+                    <Link size={14} className="mr-1" /> Connect Sheet
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Note: Make sure your Google Sheet is shared with view access to anyone with the link.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-3">Connected Sheets</h4>
+                {connectedSheets.length > 0 ? (
+                  <div className="space-y-3">
+                    {connectedSheets.map((sheet, index) => (
+                      <div key={index} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h5 className="font-medium">{sheet.name}</h5>
+                            <p className="text-xs text-muted-foreground truncate max-w-xs">{sheet.url}</p>
+                            <p className="text-xs mt-1">Last sync: {sheet.lastSync}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Sheet>
+                              <SheetTrigger asChild>
+                                <Button size="sm" variant="outline">
+                                  Configure
+                                </Button>
+                              </SheetTrigger>
+                              <SheetContent>
+                                <SheetHeader>
+                                  <SheetTitle>Configure Data Mapping</SheetTitle>
+                                  <SheetDescription>
+                                    Map columns from your Google Sheet to database fields.
+                                  </SheetDescription>
+                                </SheetHeader>
+                                <div className="mt-6 space-y-4">
+                                  <div>
+                                    <h4 className="text-sm font-medium mb-2">Sheet: {sheet.name}</h4>
+                                    <div className="border rounded-md p-3 mb-4 bg-muted/30">
+                                      <p className="text-xs text-muted-foreground mb-2">Column mapping:</p>
+                                      <div className="space-y-2">
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <p className="text-xs font-medium">Google Sheet Column</p>
+                                          <p className="text-xs font-medium">Database Field</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <p className="text-xs">Product Name</p>
+                                          <p className="text-xs">products.name</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <p className="text-xs">SKU</p>
+                                          <p className="text-xs">products.sku</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <p className="text-xs">Price</p>
+                                          <p className="text-xs">products.price</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mb-4">
+                                      <label className="text-sm font-medium mb-1 block">Sync Direction</label>
+                                      <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                        <option value="bidirectional">Bidirectional (Both ways)</option>
+                                        <option value="sheet-to-app">Google Sheet to App only</option>
+                                        <option value="app-to-sheet">App to Google Sheet only</option>
+                                      </select>
+                                    </div>
+                                    
+                                    <div className="mb-4">
+                                      <label className="text-sm font-medium mb-1 block">Advanced Mapping (JSON)</label>
+                                      <Textarea 
+                                        className="min-h-[120px]"
+                                        placeholder='{"sheet_column": "db_field", "Product Name": "products.name"}'
+                                      />
+                                    </div>
+                                  </div>
+                                  <Button onClick={handleMappingData} className="w-full">Save Configuration</Button>
+                                </div>
+                              </SheetContent>
+                            </Sheet>
+                            <Button 
+                              size="sm" 
+                              variant="default" 
+                              disabled={isSyncing}
+                              onClick={() => handleSyncSheet(index)}
+                            >
+                              <RefreshCw size={14} className={`mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+                              Sync Now
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {isSyncing && index === connectedSheets.indexOf(connectedSheets[index]) && (
+                          <div className="space-y-2">
+                            <Progress value={syncProgress} className="h-2 w-full" />
+                            <div className="text-xs text-muted-foreground">
+                              Syncing... {syncProgress}%
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center p-6 border border-dashed rounded-lg">
+                    <Spreadsheet size={24} className="mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">No sheets connected yet</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-border">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Database size={16} />
+                  <span>
+                    {lastSyncDate 
+                      ? `Last sheet sync: ${lastSyncDate}` 
+                      : 'No sheets have been synced yet'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
