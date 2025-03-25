@@ -10,15 +10,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import DashboardTab from '@/components/admin/DashboardTab';
+import ProjectsTab from '@/components/admin/ProjectsTab';
+import BrandsTab from '@/components/admin/BrandsTab';
+import LeadsTab from '@/components/admin/LeadsTab';
+import UsersTab from '@/components/admin/UsersTab';
+import DataImportTab from '@/components/admin/DataImportTab';
+import SettingsTab from '@/components/admin/SettingsTab';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    setSearchQuery('');
   };
 
-  // Ensure we have valid tab options for the mobile dropdown
+  // Tab options for the sidebar
   const tabOptions = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'projects', label: 'Projects', icon: Package },
@@ -28,6 +37,28 @@ const Admin = () => {
     { id: 'data', label: 'Data Import', icon: Database },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+  
+  // Render the active tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardTab />;
+      case 'projects':
+        return <ProjectsTab searchQuery={searchQuery} />;
+      case 'brands':
+        return <BrandsTab searchQuery={searchQuery} />;
+      case 'leads':
+        return <LeadsTab searchQuery={searchQuery} />;
+      case 'users':
+        return <UsersTab searchQuery={searchQuery} />;
+      case 'data':
+        return <DataImportTab />;
+      case 'settings':
+        return <SettingsTab />;
+      default:
+        return <DashboardTab />;
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -92,20 +123,20 @@ const Admin = () => {
               {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
             </h1>
             
-            <div className="flex items-center gap-3">
-              <Input placeholder="Search..." className="max-w-[240px]" />
-              <Button>New</Button>
-            </div>
+            {activeTab !== 'dashboard' && activeTab !== 'settings' && activeTab !== 'data' && (
+              <div className="flex items-center gap-3">
+                <Input 
+                  placeholder="Search..." 
+                  className="max-w-[240px]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Button>New</Button>
+              </div>
+            )}
           </div>
           
-          <div className="glass-card rounded-xl p-6">
-            <div className="flex items-center justify-center h-64 border border-dashed border-border rounded-lg">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">Admin functionality will be implemented in the next phase</p>
-                <Button variant="outline">View Documentation</Button>
-              </div>
-            </div>
-          </div>
+          {renderTabContent()}
         </main>
       </div>
     </div>
