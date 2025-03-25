@@ -4,6 +4,12 @@ import { ChevronDown, Database, Home, Mail, Package, Settings, ShoppingCart, Use
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Header from '@/components/layout/Header';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -11,6 +17,17 @@ const Admin = () => {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
+
+  // Ensure we have valid tab options for the mobile dropdown
+  const tabOptions = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'projects', label: 'Projects', icon: Package },
+    { id: 'brands', label: 'Brands & Products', icon: ShoppingCart },
+    { id: 'leads', label: 'Leads', icon: Mail },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'data', label: 'Data Import', icon: Database },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -25,114 +42,54 @@ const Admin = () => {
           
           <nav className="p-4">
             <ul className="space-y-1">
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'dashboard' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('dashboard')}
-                >
-                  <Home size={18} />
-                  <span>Dashboard</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'projects' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('projects')}
-                >
-                  <Package size={18} />
-                  <span>Projects</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'brands' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('brands')}
-                >
-                  <ShoppingCart size={18} />
-                  <span>Brands & Products</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'leads' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('leads')}
-                >
-                  <Mail size={18} />
-                  <span>Leads</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'users' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('users')}
-                >
-                  <Users size={18} />
-                  <span>Users</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'data' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('data')}
-                >
-                  <Database size={18} />
-                  <span>Data Import</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === 'settings' ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
-                  }`}
-                  onClick={() => handleTabChange('settings')}
-                >
-                  <Settings size={18} />
-                  <span>Settings</span>
-                </button>
-              </li>
+              {tabOptions.map((tab) => (
+                <li key={tab.id}>
+                  <button
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      activeTab === tab.id ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
+                    }`}
+                    onClick={() => handleTabChange(tab.id)}
+                  >
+                    <tab.icon size={18} />
+                    <span>{tab.label}</span>
+                  </button>
+                </li>
+              ))}
             </ul>
           </nav>
         </aside>
         
         {/* Mobile dropdown menu */}
         <div className="md:hidden w-full px-4 py-3 border-b border-border">
-          <div className="relative">
-            <button className="w-full flex items-center justify-between py-2 px-4 border border-border rounded-lg">
-              <span className="font-medium">
-                {activeTab === 'dashboard' ? 'Dashboard' : 
-                 activeTab === 'projects' ? 'Projects' : 
-                 activeTab === 'brands' ? 'Brands & Products' : 
-                 activeTab === 'leads' ? 'Leads' : 
-                 activeTab === 'users' ? 'Users' : 
-                 activeTab === 'data' ? 'Data Import' : 'Settings'}
-              </span>
-              <ChevronDown size={18} />
-            </button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full flex items-center justify-between">
+                <span className="font-medium">
+                  {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
+                </span>
+                <ChevronDown size={18} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-full bg-background" align="start">
+              {tabOptions.map((tab) => (
+                <DropdownMenuItem 
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className="cursor-pointer"
+                >
+                  <tab.icon className="mr-2" size={16} />
+                  {tab.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {/* Main content area */}
         <main className="flex-1 p-6">
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h1 className="text-2xl font-bold">
-              {activeTab === 'dashboard' ? 'Dashboard' : 
-               activeTab === 'projects' ? 'Projects' : 
-               activeTab === 'brands' ? 'Brands & Products' : 
-               activeTab === 'leads' ? 'Leads' : 
-               activeTab === 'users' ? 'Users' : 
-               activeTab === 'data' ? 'Data Import' : 'Settings'}
+              {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
             </h1>
             
             <div className="flex items-center gap-3">
