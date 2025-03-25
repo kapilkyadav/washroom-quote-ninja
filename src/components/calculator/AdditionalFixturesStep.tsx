@@ -58,11 +58,6 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
     }
   };
   
-  // Calculate total price
-  const totalPrice = Object.entries(formData.additionalFixtures)
-    .filter(([_, isSelected]) => isSelected)
-    .reduce((sum, [fixture]) => sum + fixtures[fixture].price, 0);
-  
   return (
     <div className="space-y-6 py-4 animate-slide-in">
       <h2 className="heading-2 text-center mb-8">Additional Fixtures</h2>
@@ -95,7 +90,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
             <h3 className="font-medium text-lg mb-2">{fixture.name}</h3>
             <p className="text-muted-foreground text-sm mb-4">{fixture.description}</p>
             
-            <div className="text-lg font-semibold">${fixture.price}</div>
+            {/* Price removed as per requirements */}
           </div>
         ))}
       </div>
@@ -103,22 +98,16 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
       <div className="mt-8 p-5 bg-secondary/50 rounded-lg max-w-xl mx-auto">
         <h3 className="font-medium mb-2">Selected Items</h3>
         {Object.entries(formData.additionalFixtures).some(([_, isSelected]) => isSelected) ? (
-          <>
-            <ul className="space-y-2 mb-4">
-              {Object.entries(formData.additionalFixtures)
-                .filter(([_, isSelected]) => isSelected)
-                .map(([fixture]) => (
-                  <li key={fixture} className="flex justify-between">
-                    <span>{fixtures[fixture].name}</span>
-                    <span className="font-medium">${fixtures[fixture].price}</span>
-                  </li>
-                ))}
-            </ul>
-            <div className="flex justify-between pt-3 border-t border-border">
-              <span className="font-medium">Total:</span>
-              <span className="font-bold">${totalPrice}</span>
-            </div>
-          </>
+          <ul className="space-y-2">
+            {Object.entries(formData.additionalFixtures)
+              .filter(([_, isSelected]) => isSelected)
+              .map(([fixture]) => (
+                <li key={fixture} className="flex justify-between">
+                  <span>{fixtures[fixture].name}</span>
+                  {/* Price removed as per requirements */}
+                </li>
+              ))}
+          </ul>
         ) : (
           <p className="text-muted-foreground">No additional fixtures selected</p>
         )}

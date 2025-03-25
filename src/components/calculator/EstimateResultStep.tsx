@@ -33,7 +33,7 @@ const brands: Brand[] = [
   { id: 'brand6', name: 'Designer Washrooms', clientPrice: 2200, quotationPrice: 1750, margin: 30 },
 ];
 
-const BASE_RATE_PER_SQFT = 50; // $50 per sq ft base rate
+const BASE_RATE_PER_SQFT = 50; // ₹50 per sq ft base rate
 const PLUMBING_RATES = {
   complete: 1500,
   fixtureOnly: 800
