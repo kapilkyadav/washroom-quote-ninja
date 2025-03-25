@@ -2,7 +2,7 @@
 import { CalculatorFormData, FixturePricing } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Shower, Bath, Waves, Layers } from 'lucide-react';
+import { Droplets, Square, Bath, Waves } from 'lucide-react';
 
 interface AdditionalFixturesStepProps {
   formData: CalculatorFormData;
@@ -46,9 +46,9 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
   const getIcon = (fixture: string) => {
     switch(fixture) {
       case 'showerPartition':
-        return <Shower className="w-6 h-6 text-primary" />;
+        return <Droplets className="w-6 h-6 text-primary" />;
       case 'vanity':
-        return <Layers className="w-6 h-6 text-primary" />;
+        return <Square className="w-6 h-6 text-primary" />;
       case 'bathtub':
         return <Bath className="w-6 h-6 text-primary" />;
       case 'jacuzzi':
