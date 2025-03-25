@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { CalculatorFormData, Brand } from '@/types';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,25 +65,27 @@ const BrandSelectionStep = ({ formData, updateFormData }: BrandSelectionStepProp
           <PopoverContent className="w-full p-0" align="start">
             <Command>
               <CommandInput placeholder="Search brands..." className="h-10" />
-              <CommandEmpty>No brand found.</CommandEmpty>
-              <CommandGroup>
-                {brands.map((brand) => (
-                  <CommandItem
-                    key={brand.id}
-                    value={brand.id}
-                    onSelect={handleBrandSelect}
-                    className="cursor-pointer"
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedBrand?.id === brand.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {brand.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+              <CommandList>
+                <CommandEmpty>No brand found.</CommandEmpty>
+                <CommandGroup>
+                  {brands.map((brand) => (
+                    <CommandItem
+                      key={brand.id}
+                      value={brand.id}
+                      onSelect={handleBrandSelect}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedBrand?.id === brand.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {brand.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
@@ -100,8 +102,10 @@ const BrandSelectionStep = ({ formData, updateFormData }: BrandSelectionStepProp
           >
             <h3 className="font-medium text-lg mb-3">{brand.name}</h3>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-muted-foreground">Price Range</span>
-              <span className="font-semibold">${brand.clientPrice}</span>
+              <span className="text-sm text-muted-foreground">Quality Range</span>
+              <span className="font-semibold">
+                {brand.margin > 25 ? 'Premium' : brand.margin > 18 ? 'Standard' : 'Economic'}
+              </span>
             </div>
             <div className="h-1 w-full bg-secondary rounded-full mb-3">
               <div 
@@ -127,8 +131,8 @@ const BrandSelectionStep = ({ formData, updateFormData }: BrandSelectionStepProp
               : 'Economic brand with good value for budget-conscious projects.'}
           </p>
           <div className="flex justify-between text-sm border-t border-border pt-3">
-            <span>Brand Premium:</span>
-            <span className="font-medium">${selectedBrand.clientPrice}</span>
+            <span>Brand Quality:</span>
+            <span className="font-medium">{selectedBrand.margin > 25 ? 'Premium' : selectedBrand.margin > 18 ? 'Standard' : 'Economic'}</span>
           </div>
         </div>
       )}
