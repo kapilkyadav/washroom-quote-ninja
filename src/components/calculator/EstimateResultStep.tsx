@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { CalculatorFormData, Brand, FixturePricing, EstimateBreakdown } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Check, Printer, Mail, Download } from 'lucide-react';
+import { Check, Printer, Mail, Download, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EstimateResultStepProps {
@@ -129,6 +129,11 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
     onReset();
   };
   
+  // Format currency in INR
+  const formatINR = (amount: number) => {
+    return amount.toFixed(2);
+  };
+  
   return (
     <div className="py-4 animate-slide-in max-w-4xl mx-auto">
       <h2 className="heading-2 text-center mb-8">Your Estimate</h2>
@@ -156,47 +161,68 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Base Price ({formData.dimensions.length} × {formData.dimensions.width} sq ft)</span>
-                    <span>${breakdown.basePrice.toFixed(2)}</span>
+                    <span className="flex items-center">
+                      <IndianRupee size={16} className="mr-1" />
+                      {formatINR(breakdown.basePrice)}
+                    </span>
                   </div>
                   
                   {breakdown.electricalFixturesPrice > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Electrical Fixtures</span>
-                      <span>${breakdown.electricalFixturesPrice.toFixed(2)}</span>
+                      <span className="flex items-center">
+                        <IndianRupee size={16} className="mr-1" />
+                        {formatINR(breakdown.electricalFixturesPrice)}
+                      </span>
                     </div>
                   )}
                   
                   {breakdown.plumbingPrice > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Plumbing ({formData.plumbingRequirements === 'complete' ? 'Complete' : 'Fixture Only'})</span>
-                      <span>${breakdown.plumbingPrice.toFixed(2)}</span>
+                      <span className="flex items-center">
+                        <IndianRupee size={16} className="mr-1" />
+                        {formatINR(breakdown.plumbingPrice)}
+                      </span>
                     </div>
                   )}
                   
                   {breakdown.additionalFixturesPrice > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Additional Fixtures</span>
-                      <span>${breakdown.additionalFixturesPrice.toFixed(2)}</span>
+                      <span className="flex items-center">
+                        <IndianRupee size={16} className="mr-1" />
+                        {formatINR(breakdown.additionalFixturesPrice)}
+                      </span>
                     </div>
                   )}
                   
                   {breakdown.brandPremium > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Brand Premium ({brands.find(b => b.id === formData.brandSelection)?.name})</span>
-                      <span>${breakdown.brandPremium.toFixed(2)}</span>
+                      <span className="flex items-center">
+                        <IndianRupee size={16} className="mr-1" />
+                        {formatINR(breakdown.brandPremium)}
+                      </span>
                     </div>
                   )}
                   
                   {breakdown.timelineDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Timeline Discount (5%)</span>
-                      <span>-${breakdown.timelineDiscount.toFixed(2)}</span>
+                      <span className="flex items-center">
+                        <IndianRupee size={16} className="mr-1" />
+                        {formatINR(breakdown.timelineDiscount)}
+                      </span>
                     </div>
                   )}
                   
                   <div className="pt-3 border-t border-border flex justify-between font-semibold text-lg">
                     <span>Total Estimate</span>
-                    <span>${breakdown.total.toFixed(2)}</span>
+                    <span className="flex items-center">
+                      <IndianRupee size={16} className="mr-1" />
+                      {formatINR(breakdown.total)}
+                    </span>
                   </div>
                 </div>
               </div>

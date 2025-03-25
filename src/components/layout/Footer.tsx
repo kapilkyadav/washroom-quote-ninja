@@ -11,7 +11,7 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="inline-block mb-4">
               <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-                QuoteNinja
+                Your Dream Space
               </span>
             </Link>
             <p className="text-muted-foreground max-w-md mb-6">
@@ -43,16 +43,16 @@ const Footer = () => {
           <div className="col-span-1">
             <h3 className="font-medium text-lg mb-4">Contact</h3>
             <ul className="space-y-3">
-              <li className="text-muted-foreground">support@quoteninja.com</li>
-              <li className="text-muted-foreground">+1 234 567 8900</li>
-              <li className="text-muted-foreground">123 Calculator Ave, <br />Suite 456, <br />Washroom City</li>
+              <li className="text-muted-foreground">support@yourdreamspace.com</li>
+              <li className="text-muted-foreground">+91 234 567 8900</li>
+              <li className="text-muted-foreground">123 Dream Ave, <br />Suite 456, <br />New Delhi</li>
             </ul>
           </div>
         </div>
         
         <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-            © {currentYear} QuoteNinja. All rights reserved.
+            © {currentYear} Your Dream Space. All rights reserved.
           </p>
           <div className="flex space-x-6">
             <a href="#" className="text-muted-foreground hover:text-primary transition-colors">

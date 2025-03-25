@@ -83,7 +83,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
             <h3 className="font-medium text-lg mb-2">{fixture.name}</h3>
             <p className="text-muted-foreground text-sm mb-4">{fixture.description}</p>
             
-            <div className="text-lg font-semibold">${fixture.price}</div>
+            {/* Price removed as per requirements */}
           </div>
         ))}
       </div>
@@ -97,7 +97,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
                   <span>{fixtures[fixture].name}</span>
-                  <span className="font-medium">${fixtures[fixture].price}</span>
+                  {/* Price removed as per requirements */}
                 </li>
               ))}
           </ul>
