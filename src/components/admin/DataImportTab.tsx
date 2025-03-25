@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileUp, FileX, FileCheck, Database, Download, BarChart, ShoppingCart, Mail, Package, Link, Spreadsheet, RefreshCw } from 'lucide-react';
+import { FileUp, FileX, FileCheck, Database, Download, BarChart, ShoppingCart, Mail, Package, Link, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -504,7 +504,7 @@ const DataImportTab = () => {
                   </div>
                 ) : (
                   <div className="text-center p-6 border border-dashed rounded-lg">
-                    <Spreadsheet size={24} className="mx-auto text-muted-foreground mb-2" />
+                    <FileSpreadsheet size={24} className="mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">No sheets connected yet</p>
                   </div>
                 )}
