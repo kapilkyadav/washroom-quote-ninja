@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -116,7 +115,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      const query = supabase
+      // Create the complete query chain before awaiting it
+      const { error } = await supabase
         .from('fixtures')
         .update({
           name: editValues.name,
@@ -125,8 +125,6 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         })
         .eq('fixture_id', id)
         .eq('type', fixtureType);
-      
-      const { error } = await query;
       
       if (error) throw error;
 
@@ -266,13 +264,12 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        const query = supabase
+        // Create the complete query chain before awaiting it
+        const { error } = await supabase
           .from('fixtures')
           .delete()
           .eq('fixture_id', id)
           .eq('type', fixtureType);
-        
-        const { error } = await query;
         
         if (error) throw error;
 
