@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Clock, DollarSign, LineChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,11 +28,6 @@ const Index = () => {
                   <Link to="/calculator">
                     Get Your Estimate
                     <ArrowRight size={16} />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="button-animation">
-                  <Link to="/admin">
-                    Admin Portal
                   </Link>
                 </Button>
               </div>
