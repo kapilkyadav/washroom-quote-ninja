@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { CalculatorFormData, Brand, FixturePricing, EstimateBreakdown } from '@/types';
+import { CalculatorFormData, Brand, FixturePricing, EstimateBreakdown, CalcSubmission } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Check, Printer, Mail, Download, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
