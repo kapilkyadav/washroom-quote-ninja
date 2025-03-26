@@ -10,7 +10,6 @@ import Calculator from "./pages/Calculator";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -25,11 +24,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={
-              <ProtectedRoute>
-                <Admin />
-              </ProtectedRoute>
-            } />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
