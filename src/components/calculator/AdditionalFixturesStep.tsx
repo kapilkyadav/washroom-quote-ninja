@@ -1,39 +1,71 @@
-
+import { useState, useEffect } from 'react';
 import { CalculatorFormData, FixturePricing } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Droplets, Square, Bath, Waves, IndianRupee } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface AdditionalFixturesStepProps {
   formData: CalculatorFormData;
   updateFormData: (field: keyof CalculatorFormData, value: any) => void;
 }
 
-// Updated fixture pricing to match admin panel values
-const fixtures: FixturePricing = {
-  showerPartition: {
-    name: 'Shower Partition',
-    price: 450,
-    description: 'Tempered glass shower enclosure with hardware'
-  },
-  vanity: {
-    name: 'Vanity',
-    price: 380,
-    description: 'Stylish vanity unit with storage and mirror'
-  },
-  bathtub: {
-    name: 'Bathtub',
-    price: 650,
-    description: 'Premium acrylic bathtub with fixtures'
-  },
-  jacuzzi: {
-    name: 'Jacuzzi',
-    price: 1200,
-    description: 'Luxury jacuzzi with multiple jets and controls'
-  }
-};
-
 const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixturesStepProps) => {
+  const [fixtures, setFixtures] = useState<FixturePricing>({
+    showerPartition: {
+      name: 'Shower Partition',
+      price: 15000,
+      description: 'Glass shower partition with frame'
+    },
+    vanity: {
+      name: 'Vanity',
+      price: 25000,
+      description: 'Modern bathroom vanity with storage'
+    },
+    bathtub: {
+      name: 'Bathtub',
+      price: 35000,
+      description: 'Premium acrylic bathtub with fixtures'
+    },
+    jacuzzi: {
+      name: 'Jacuzzi',
+      price: 55000,
+      description: 'Luxury jacuzzi with multiple jets and controls'
+    }
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBathroomFixtures();
+  }, []);
+
+  const fetchBathroomFixtures = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'bathroom');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const fixturesObj: FixturePricing = {};
+        data.forEach(item => {
+          fixturesObj[item.fixture_id] = {
+            name: item.name,
+            price: item.price,
+            description: item.description
+          };
+        });
+        setFixtures(fixturesObj);
+      }
+    } catch (error) {
+      console.error('Error fetching bathroom fixtures:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCheckboxChange = (fixture: keyof typeof formData.additionalFixtures) => {
     const updatedFixtures = {
       ...formData.additionalFixtures,
@@ -57,6 +89,14 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
         return null;
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6 py-4 animate-slide-in">
@@ -106,10 +146,10 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
               .filter(([_, isSelected]) => isSelected)
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
-                  <span>{fixtures[fixture].name}</span>
+                  <span>{fixtures[fixture]?.name || fixture}</span>
                   <span className="flex items-center">
                     <IndianRupee className="h-3.5 w-3.5 mr-1" />
-                    {fixtures[fixture].price.toLocaleString('en-IN')}
+                    {fixtures[fixture]?.price.toLocaleString('en-IN') || '0'}
                   </span>
                 </li>
               ))}

@@ -1,34 +1,66 @@
-
+import { useEffect, useState } from 'react';
 import { CalculatorFormData, FixturePricing } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, Wind, FlameKindling, IndianRupee } from 'lucide-react';
+import { Lightbulb, Wind, FlameKindling } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface ElectricalStepProps {
   formData: CalculatorFormData;
   updateFormData: (field: keyof CalculatorFormData, value: any) => void;
 }
 
-// Updated fixture pricing to match admin panel values - but not displayed to customers
-const fixtures: FixturePricing = {
-  ledMirror: {
-    name: 'LED Mirror',
-    price: 3500,
-    description: 'Modern LED mirror with touch controls'
-  },
-  exhaustFan: {
-    name: 'Exhaust Fan',
-    price: 1800,
-    description: 'High-quality silent exhaust fan'
-  },
-  waterHeater: {
-    name: 'Water Heater',
-    price: 8000,
-    description: 'Energy-efficient water heater'
-  }
-};
-
 const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
+  const [fixtures, setFixtures] = useState<FixturePricing>({
+    ledMirror: {
+      name: 'LED Mirror',
+      price: 3500,
+      description: 'Modern LED mirror with touch controls'
+    },
+    exhaustFan: {
+      name: 'Exhaust Fan',
+      price: 1800,
+      description: 'High-quality silent exhaust fan'
+    },
+    waterHeater: {
+      name: 'Water Heater',
+      price: 8000,
+      description: 'Energy-efficient water heater'
+    }
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchElectricalFixtures();
+  }, []);
+
+  const fetchElectricalFixtures = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'electrical');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const fixturesObj: FixturePricing = {};
+        data.forEach(item => {
+          fixturesObj[item.fixture_id] = {
+            name: item.name,
+            price: item.price,
+            description: item.description
+          };
+        });
+        setFixtures(fixturesObj);
+      }
+    } catch (error) {
+      console.error('Error fetching electrical fixtures:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCheckboxChange = (fixture: keyof typeof formData.electricalFixtures) => {
     const updatedFixtures = {
       ...formData.electricalFixtures,
@@ -50,6 +82,14 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
         return null;
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6 py-4 animate-slide-in">
@@ -84,10 +124,6 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
             <p className="text-muted-foreground text-sm mb-4">{fixture.description}</p>
             
             {/* Don't show actual backend pricing to customers */}
-            {/* <div className="flex items-center text-sm font-medium">
-              <IndianRupee className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span>{fixture.price.toLocaleString('en-IN')}</span>
-            </div> */}
           </div>
         ))}
       </div>
@@ -100,7 +136,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
               .filter(([_, isSelected]) => isSelected)
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
-                  <span>{fixtures[fixture].name}</span>
+                  <span>{fixtures[fixture]?.name || fixture}</span>
                   {/* Don't show prices to customers */}
                 </li>
               ))}

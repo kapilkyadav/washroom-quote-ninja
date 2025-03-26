@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -16,35 +15,88 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FixturePricing, FixtureType } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface FixturePricingTabProps {
   searchQuery: string;
 }
 
-// Sample data
-const sampleElectricalFixtures: FixturePricing = {
-  ledMirror: { name: 'LED Mirror', price: 3500, description: 'Modern LED mirror with touch controls' },
-  exhaustFan: { name: 'Exhaust Fan', price: 1800, description: 'High-quality silent exhaust fan' },
-  waterHeater: { name: 'Water Heater', price: 8000, description: 'Energy-efficient water heater' },
-};
-
-const sampleBathroomFixtures: FixturePricing = {
-  showerPartition: { name: 'Shower Partition', price: 15000, description: 'Glass shower partition with frame' },
-  vanity: { name: 'Vanity', price: 25000, description: 'Modern bathroom vanity with storage' },
-  bathtub: { name: 'Bathtub', price: 35000, description: 'Luxurious freestanding bathtub' },
-  jacuzzi: { name: 'Jacuzzi', price: 55000, description: 'Premium jacuzzi with massage jets' },
-};
-
 const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
   const [activeTab, setActiveTab] = useState('electrical');
-  const [electricalFixtures, setElectricalFixtures] = useState<FixturePricing>(sampleElectricalFixtures);
-  const [bathroomFixtures, setBathroomFixtures] = useState<FixturePricing>(sampleBathroomFixtures);
+  const [electricalFixtures, setElectricalFixtures] = useState<FixturePricing>({});
+  const [bathroomFixtures, setBathroomFixtures] = useState<FixturePricing>({});
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editValues, setEditValues] = useState({ name: '', price: 0, description: '' });
   const [newFixture, setNewFixture] = useState({ id: '', name: '', price: 0, description: '' });
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Filter fixtures based on search query
+  useEffect(() => {
+    fetchFixtures();
+  }, []);
+
+  const fetchFixtures = async () => {
+    setIsLoading(true);
+    try {
+      const { data: electricalData, error: electricalError } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'electrical');
+
+      if (electricalError) throw electricalError;
+
+      const { data: bathroomData, error: bathroomError } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'bathroom');
+
+      if (bathroomError) throw bathroomError;
+
+      const electricalMap: FixturePricing = {};
+      electricalData.forEach(item => {
+        electricalMap[item.fixture_id] = {
+          name: item.name,
+          price: item.price,
+          description: item.description
+        };
+      });
+
+      const bathroomMap: FixturePricing = {};
+      bathroomData.forEach(item => {
+        bathroomMap[item.fixture_id] = {
+          name: item.name,
+          price: item.price,
+          description: item.description
+        };
+      });
+
+      setElectricalFixtures(electricalMap);
+      setBathroomFixtures(bathroomMap);
+    } catch (error) {
+      console.error('Error fetching fixtures:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load fixture data.",
+        variant: "destructive",
+      });
+      
+      setElectricalFixtures({
+        ledMirror: { name: 'LED Mirror', price: 3500, description: 'Modern LED mirror with touch controls' },
+        exhaustFan: { name: 'Exhaust Fan', price: 1800, description: 'High-quality silent exhaust fan' },
+        waterHeater: { name: 'Water Heater', price: 8000, description: 'Energy-efficient water heater' },
+      });
+      
+      setBathroomFixtures({
+        showerPartition: { name: 'Shower Partition', price: 15000, description: 'Glass shower partition with frame' },
+        vanity: { name: 'Vanity', price: 25000, description: 'Modern bathroom vanity with storage' },
+        bathtub: { name: 'Bathtub', price: 35000, description: 'Luxurious freestanding bathtub' },
+        jacuzzi: { name: 'Jacuzzi', price: 55000, description: 'Premium jacuzzi with massage jets' },
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredElectricalFixtures = Object.entries(electricalFixtures).filter(([id, fixture]) => 
     fixture.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -55,7 +107,6 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle editing a fixture
   const handleEditStart = (id: string, fixture: { name: string, price: number, description?: string }) => {
     setIsEditing(id);
     setEditValues({
@@ -65,41 +116,61 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     });
   };
 
-  // Save edited fixture
-  const handleSaveEdit = (id: string) => {
-    if (activeTab === 'electrical') {
-      setElectricalFixtures(prev => ({
-        ...prev,
-        [id]: {
+  const handleSaveEdit = async (id: string) => {
+    try {
+      const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
+      
+      const { error } = await supabase
+        .from('fixtures')
+        .update({
           name: editValues.name,
           price: editValues.price,
-          description: editValues.description,
-        },
-      }));
-    } else {
-      setBathroomFixtures(prev => ({
-        ...prev,
-        [id]: {
-          name: editValues.name,
-          price: editValues.price,
-          description: editValues.description,
-        },
-      }));
-    }
+          description: editValues.description
+        })
+        .eq('fixture_id', id)
+        .eq('type', fixtureType);
+      
+      if (error) throw error;
 
-    setIsEditing(null);
-    toast({
-      title: "Fixture Updated",
-      description: `${editValues.name} has been updated successfully.`,
-    });
+      if (activeTab === 'electrical') {
+        setElectricalFixtures(prev => ({
+          ...prev,
+          [id]: {
+            name: editValues.name,
+            price: editValues.price,
+            description: editValues.description,
+          },
+        }));
+      } else {
+        setBathroomFixtures(prev => ({
+          ...prev,
+          [id]: {
+            name: editValues.name,
+            price: editValues.price,
+            description: editValues.description,
+          },
+        }));
+      }
+
+      setIsEditing(null);
+      toast({
+        title: "Fixture Updated",
+        description: `${editValues.name} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error('Error updating fixture:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update fixture.",
+        variant: "destructive",
+      });
+    }
   };
 
-  // Handle cancel edit
   const handleCancelEdit = () => {
     setIsEditing(null);
   };
 
-  // Handle edit input change
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -109,7 +180,6 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     }));
   };
 
-  // Handle new fixture input change
   const handleNewFixtureChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -119,8 +189,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     }));
   };
 
-  // Add new fixture
-  const handleAddFixture = () => {
+  const handleAddFixture = async () => {
     if (!newFixture.id || !newFixture.name) {
       toast({
         title: "Error",
@@ -130,69 +199,104 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       return;
     }
 
-    if (activeTab === 'electrical') {
-      if (electricalFixtures[newFixture.id as keyof typeof electricalFixtures]) {
-        toast({
-          title: "Error",
-          description: "A fixture with this ID already exists.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setElectricalFixtures(prev => ({
-        ...prev,
-        [newFixture.id]: {
-          name: newFixture.name,
-          price: newFixture.price,
-          description: newFixture.description,
-        },
-      }));
-    } else {
-      if (bathroomFixtures[newFixture.id as keyof typeof bathroomFixtures]) {
-        toast({
-          title: "Error",
-          description: "A fixture with this ID already exists.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setBathroomFixtures(prev => ({
-        ...prev,
-        [newFixture.id]: {
-          name: newFixture.name,
-          price: newFixture.price,
-          description: newFixture.description,
-        },
-      }));
-    }
-
-    setNewFixture({ id: '', name: '', price: 0, description: '' });
-    setIsAddingNew(false);
+    const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
     
-    toast({
-      title: "Fixture Added",
-      description: `${newFixture.name} has been added successfully.`,
-    });
-  };
-
-  // Delete fixture
-  const handleDeleteFixture = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      if (activeTab === 'electrical') {
-        const { [id]: _, ...restFixtures } = electricalFixtures;
-        setElectricalFixtures(restFixtures as FixturePricing);
-      } else {
-        const { [id]: _, ...restFixtures } = bathroomFixtures;
-        setBathroomFixtures(restFixtures as FixturePricing);
+    try {
+      if (
+        (activeTab === 'electrical' && electricalFixtures[newFixture.id]) ||
+        (activeTab === 'bathroom' && bathroomFixtures[newFixture.id])
+      ) {
+        toast({
+          title: "Error",
+          description: "A fixture with this ID already exists.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const { error } = await supabase
+        .from('fixtures')
+        .insert({
+          fixture_id: newFixture.id,
+          name: newFixture.name,
+          price: newFixture.price,
+          description: newFixture.description,
+          type: fixtureType
+        });
+      
+      if (error) throw error;
+
+      if (activeTab === 'electrical') {
+        setElectricalFixtures(prev => ({
+          ...prev,
+          [newFixture.id]: {
+            name: newFixture.name,
+            price: newFixture.price,
+            description: newFixture.description,
+          },
+        }));
+      } else {
+        setBathroomFixtures(prev => ({
+          ...prev,
+          [newFixture.id]: {
+            name: newFixture.name,
+            price: newFixture.price,
+            description: newFixture.description,
+          },
+        }));
+      }
+
+      setNewFixture({ id: '', name: '', price: 0, description: '' });
+      setIsAddingNew(false);
       
       toast({
-        title: "Fixture Deleted",
-        description: `${name} has been deleted successfully.`,
+        title: "Fixture Added",
+        description: `${newFixture.name} has been added successfully.`,
+      });
+    } catch (error) {
+      console.error('Error adding fixture:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add new fixture.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDeleteFixture = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+      try {
+        const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
+        
+        const { error } = await supabase
+          .from('fixtures')
+          .delete()
+          .eq('fixture_id', id)
+          .eq('type', fixtureType);
+        
+        if (error) throw error;
+
+        if (activeTab === 'electrical') {
+          const { [id]: _, ...restFixtures } = electricalFixtures;
+          setElectricalFixtures(restFixtures as FixturePricing);
+        } else {
+          const { [id]: _, ...restFixtures } = bathroomFixtures;
+          setBathroomFixtures(restFixtures as FixturePricing);
+        }
+        
+        toast({
+          title: "Fixture Deleted",
+          description: `${name} has been deleted successfully.`,
+          variant: "destructive",
+        });
+      } catch (error) {
+        console.error('Error deleting fixture:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete fixture.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -213,346 +317,352 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         </Button>
       </div>
       
-      <Tabs defaultValue="electrical" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="electrical">Electrical Fixtures</TabsTrigger>
-          <TabsTrigger value="bathroom">Bathroom Fixtures</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="electrical">
-          {isAddingNew && (
-            <div className="p-4 border rounded-md mb-4 bg-muted/30">
-              <h4 className="text-sm font-semibold mb-3">Add New Electrical Fixture</h4>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="id">Fixture ID</Label>
-                  <Input 
-                    id="id"
-                    name="id"
-                    value={newFixture.id}
-                    onChange={handleNewFixtureChange}
-                    placeholder="ledLight"
-                  />
-                  <p className="text-xs text-muted-foreground">Unique identifier, used in code</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Fixture Name</Label>
-                  <Input 
-                    id="name"
-                    name="name"
-                    value={newFixture.name}
-                    onChange={handleNewFixtureChange}
-                    placeholder="LED Light"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input 
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={newFixture.price}
-                    onChange={handleNewFixtureChange}
-                    placeholder="1000"
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description"
-                    name="description"
-                    value={newFixture.description}
-                    onChange={handleNewFixtureChange}
-                    placeholder="Describe the fixture..."
-                    rows={2}
-                  />
-                </div>
-                <div className="sm:col-span-2 flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddingNew(false)}>Cancel</Button>
-                  <Button onClick={handleAddFixture}>Add Fixture</Button>
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <Tabs defaultValue="electrical" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="electrical">Electrical Fixtures</TabsTrigger>
+            <TabsTrigger value="bathroom">Bathroom Fixtures</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="electrical">
+            {isAddingNew && (
+              <div className="p-4 border rounded-md mb-4 bg-muted/30">
+                <h4 className="text-sm font-semibold mb-3">Add New Electrical Fixture</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="id">Fixture ID</Label>
+                    <Input 
+                      id="id"
+                      name="id"
+                      value={newFixture.id}
+                      onChange={handleNewFixtureChange}
+                      placeholder="ledLight"
+                    />
+                    <p className="text-xs text-muted-foreground">Unique identifier, used in code</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Fixture Name</Label>
+                    <Input 
+                      id="name"
+                      name="name"
+                      value={newFixture.name}
+                      onChange={handleNewFixtureChange}
+                      placeholder="LED Light"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (₹)</Label>
+                    <Input 
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={newFixture.price}
+                      onChange={handleNewFixtureChange}
+                      placeholder="1000"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea 
+                      id="description"
+                      name="description"
+                      value={newFixture.description}
+                      onChange={handleNewFixtureChange}
+                      placeholder="Describe the fixture..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsAddingNew(false)}>Cancel</Button>
+                    <Button onClick={handleAddFixture}>Add Fixture</Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead className="text-right">Price (₹)</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredElectricalFixtures.length > 0 ? (
-                  filteredElectricalFixtures.map(([id, fixture]) => (
-                    <TableRow key={id}>
-                      <TableCell>
-                        {isEditing === id ? (
-                          <Input 
-                            name="name"
-                            value={editValues.name}
-                            onChange={handleEditChange}
-                          />
-                        ) : (
-                          fixture.name
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{id}</TableCell>
-                      <TableCell className="text-right">
-                        {isEditing === id ? (
-                          <Input 
-                            name="price"
-                            type="number"
-                            value={editValues.price}
-                            onChange={handleEditChange}
-                            className="w-24 ml-auto"
-                          />
-                        ) : (
-                          `₹${fixture.price.toLocaleString()}`
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {isEditing === id ? (
-                          <Textarea 
-                            name="description"
-                            value={editValues.description}
-                            onChange={handleEditChange}
-                            rows={2}
-                          />
-                        ) : (
-                          fixture.description
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing === id ? (
-                          <div className="flex space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleSaveEdit(id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Save className="h-4 w-4" />
-                              <span className="sr-only">Save</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={handleCancelEdit}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                              <span className="sr-only">Cancel</span>
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleEditStart(id, fixture)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleDeleteFixture(id, fixture.name)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
-                            >
-                              <Trash className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        )}
+            )}
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead className="text-right">Price (₹)</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredElectricalFixtures.length > 0 ? (
+                    filteredElectricalFixtures.map(([id, fixture]) => (
+                      <TableRow key={id}>
+                        <TableCell>
+                          {isEditing === id ? (
+                            <Input 
+                              name="name"
+                              value={editValues.name}
+                              onChange={handleEditChange}
+                            />
+                          ) : (
+                            fixture.name
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{id}</TableCell>
+                        <TableCell className="text-right">
+                          {isEditing === id ? (
+                            <Input 
+                              name="price"
+                              type="number"
+                              value={editValues.price}
+                              onChange={handleEditChange}
+                              className="w-24 ml-auto"
+                            />
+                          ) : (
+                            `₹${fixture.price.toLocaleString()}`
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {isEditing === id ? (
+                            <Textarea 
+                              name="description"
+                              value={editValues.description}
+                              onChange={handleEditChange}
+                              rows={2}
+                            />
+                          ) : (
+                            fixture.description
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing === id ? (
+                            <div className="flex space-x-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleSaveEdit(id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Save className="h-4 w-4" />
+                                <span className="sr-only">Save</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleCancelEdit}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Cancel</span>
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex space-x-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleEditStart(id, fixture)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteFixture(id, fixture.name)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
+                              >
+                                <Trash className="h-4 w-4" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        No electrical fixtures found matching your search.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                      No electrical fixtures found matching your search.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="bathroom">
-          {isAddingNew && (
-            <div className="p-4 border rounded-md mb-4 bg-muted/30">
-              <h4 className="text-sm font-semibold mb-3">Add New Bathroom Fixture</h4>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="id">Fixture ID</Label>
-                  <Input 
-                    id="id"
-                    name="id"
-                    value={newFixture.id}
-                    onChange={handleNewFixtureChange}
-                    placeholder="showerHead"
-                  />
-                  <p className="text-xs text-muted-foreground">Unique identifier, used in code</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Fixture Name</Label>
-                  <Input 
-                    id="name"
-                    name="name"
-                    value={newFixture.name}
-                    onChange={handleNewFixtureChange}
-                    placeholder="Shower Head"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input 
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={newFixture.price}
-                    onChange={handleNewFixtureChange}
-                    placeholder="5000"
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description"
-                    name="description"
-                    value={newFixture.description}
-                    onChange={handleNewFixtureChange}
-                    placeholder="Describe the fixture..."
-                    rows={2}
-                  />
-                </div>
-                <div className="sm:col-span-2 flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddingNew(false)}>Cancel</Button>
-                  <Button onClick={handleAddFixture}>Add Fixture</Button>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="bathroom">
+            {isAddingNew && (
+              <div className="p-4 border rounded-md mb-4 bg-muted/30">
+                <h4 className="text-sm font-semibold mb-3">Add New Bathroom Fixture</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="id">Fixture ID</Label>
+                    <Input 
+                      id="id"
+                      name="id"
+                      value={newFixture.id}
+                      onChange={handleNewFixtureChange}
+                      placeholder="showerHead"
+                    />
+                    <p className="text-xs text-muted-foreground">Unique identifier, used in code</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Fixture Name</Label>
+                    <Input 
+                      id="name"
+                      name="name"
+                      value={newFixture.name}
+                      onChange={handleNewFixtureChange}
+                      placeholder="Shower Head"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (₹)</Label>
+                    <Input 
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={newFixture.price}
+                      onChange={handleNewFixtureChange}
+                      placeholder="5000"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea 
+                      id="description"
+                      name="description"
+                      value={newFixture.description}
+                      onChange={handleNewFixtureChange}
+                      placeholder="Describe the fixture..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsAddingNew(false)}>Cancel</Button>
+                    <Button onClick={handleAddFixture}>Add Fixture</Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead className="text-right">Price (₹)</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBathroomFixtures.length > 0 ? (
-                  filteredBathroomFixtures.map(([id, fixture]) => (
-                    <TableRow key={id}>
-                      <TableCell>
-                        {isEditing === id ? (
-                          <Input 
-                            name="name"
-                            value={editValues.name}
-                            onChange={handleEditChange}
-                          />
-                        ) : (
-                          fixture.name
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{id}</TableCell>
-                      <TableCell className="text-right">
-                        {isEditing === id ? (
-                          <Input 
-                            name="price"
-                            type="number"
-                            value={editValues.price}
-                            onChange={handleEditChange}
-                            className="w-24 ml-auto"
-                          />
-                        ) : (
-                          `₹${fixture.price.toLocaleString()}`
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {isEditing === id ? (
-                          <Textarea 
-                            name="description"
-                            value={editValues.description}
-                            onChange={handleEditChange}
-                            rows={2}
-                          />
-                        ) : (
-                          fixture.description
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing === id ? (
-                          <div className="flex space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleSaveEdit(id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Save className="h-4 w-4" />
-                              <span className="sr-only">Save</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={handleCancelEdit}
-                              className="h-8 w-8 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                              <span className="sr-only">Cancel</span>
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleEditStart(id, fixture)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleDeleteFixture(id, fixture.name)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
-                            >
-                              <Trash className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        )}
+            )}
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead className="text-right">Price (₹)</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredBathroomFixtures.length > 0 ? (
+                    filteredBathroomFixtures.map(([id, fixture]) => (
+                      <TableRow key={id}>
+                        <TableCell>
+                          {isEditing === id ? (
+                            <Input 
+                              name="name"
+                              value={editValues.name}
+                              onChange={handleEditChange}
+                            />
+                          ) : (
+                            fixture.name
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{id}</TableCell>
+                        <TableCell className="text-right">
+                          {isEditing === id ? (
+                            <Input 
+                              name="price"
+                              type="number"
+                              value={editValues.price}
+                              onChange={handleEditChange}
+                              className="w-24 ml-auto"
+                            />
+                          ) : (
+                            `₹${fixture.price.toLocaleString()}`
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {isEditing === id ? (
+                            <Textarea 
+                              name="description"
+                              value={editValues.description}
+                              onChange={handleEditChange}
+                              rows={2}
+                            />
+                          ) : (
+                            fixture.description
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing === id ? (
+                            <div className="flex space-x-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleSaveEdit(id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Save className="h-4 w-4" />
+                                <span className="sr-only">Save</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleCancelEdit}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Cancel</span>
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex space-x-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleEditStart(id, fixture)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteFixture(id, fixture.name)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
+                              >
+                                <Trash className="h-4 w-4" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        No bathroom fixtures found matching your search.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                      No bathroom fixtures found matching your search.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-      </Tabs>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

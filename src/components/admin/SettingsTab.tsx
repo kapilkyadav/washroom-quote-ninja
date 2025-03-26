@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +17,11 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalculatorSettings } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 const SettingsTab = () => {
   const [activeTab, setActiveTab] = useState('general');
+  const [isLoading, setIsLoading] = useState(false);
   
   const [generalSettings, setGeneralSettings] = useState({
     companyName: 'Luxury Bathroom Solutions',
@@ -42,28 +44,155 @@ const SettingsTab = () => {
     tileCostPerUnit: 80,
     tilingLaborRate: 85,
   });
-  
-  const saveGeneralSettings = () => {
-    // Here you would save the settings to a database
-    toast({
-      title: "Settings Saved",
-      description: "General settings have been updated successfully.",
-    });
+
+  // Fetch settings on component mount
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch calculator settings
+      const { data: calcData, error: calcError } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('category', 'calculator')
+        .single();
+
+      if (calcError && calcError.code !== 'PGRST116') {
+        throw calcError;
+      }
+
+      // If data exists, update state
+      if (calcData) {
+        setCalculatorSettings({
+          plumbingRatePerSqFt: calcData.settings.plumbingRatePerSqFt || 50,
+          tileCostPerUnit: calcData.settings.tileCostPerUnit || 80,
+          tilingLaborRate: calcData.settings.tilingLaborRate || 85,
+        });
+      }
+
+      // Similar for general and email settings
+      const { data: generalData, error: generalError } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('category', 'general')
+        .single();
+
+      if (!generalError && generalData) {
+        setGeneralSettings(generalData.settings);
+      }
+
+      const { data: emailData, error: emailError } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('category', 'email')
+        .single();
+
+      if (!emailError && emailData) {
+        setEmailSettings(emailData.settings);
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const saveEmailSettings = () => {
-    toast({
-      title: "Email Settings Saved",
-      description: "Notification settings have been updated successfully.",
-    });
+  const saveGeneralSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .upsert({
+          category: 'general',
+          settings: generalSettings
+        }, {
+          onConflict: 'category'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Settings Saved",
+        description: "General settings have been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving general settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save general settings.",
+        variant: "destructive",
+      });
+    }
   };
   
-  const saveCalculatorSettings = () => {
-    toast({
-      title: "Calculator Settings Saved",
-      description: "Price calculations have been updated successfully.",
-    });
+  const saveEmailSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .upsert({
+          category: 'email',
+          settings: emailSettings
+        }, {
+          onConflict: 'category'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Email Settings Saved",
+        description: "Notification settings have been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving email settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save email settings.",
+        variant: "destructive",
+      });
+    }
   };
+  
+  const saveCalculatorSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .upsert({
+          category: 'calculator',
+          settings: calculatorSettings
+        }, {
+          onConflict: 'category'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Calculator Settings Saved",
+        description: "Price calculations have been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving calculator settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save calculator settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -3,46 +3,31 @@ import { CalculatorFormData, Brand, FixturePricing, EstimateBreakdown, CalcSubmi
 import { Button } from '@/components/ui/button';
 import { Check, Printer, Mail, Download, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 interface EstimateResultStepProps {
   formData: CalculatorFormData;
   onReset: () => void;
 }
 
-// Updated pricing data to match admin panel values
-const electricalFixturePricing: FixturePricing = {
-  ledMirror: { name: 'LED Mirror', price: 3500 },
-  exhaustFan: { name: 'Exhaust Fan', price: 1800 },
-  waterHeater: { name: 'Water Heater', price: 8000 }
-};
-
-const additionalFixturePricing: FixturePricing = {
-  showerPartition: { name: 'Shower Partition', price: 15000, description: 'Glass shower partition with frame' },
-  vanity: { name: 'Vanity', price: 25000, description: 'Modern bathroom vanity with storage' },
-  bathtub: { name: 'Bathtub', price: 35000, description: 'Premium acrylic bathtub with fixtures' },
-  jacuzzi: { name: 'Jacuzzi', price: 55000, description: 'Premium jacuzzi with massage jets' },
-};
-
-const brands: Brand[] = [
-  { id: 'brand1', name: 'Luxe Bathware', clientPrice: 1500, quotationPrice: 1200, margin: 20 },
-  { id: 'brand2', name: 'Modern Plumbing', clientPrice: 1200, quotationPrice: 950, margin: 15 },
-  { id: 'brand3', name: 'Premium Fixtures', clientPrice: 2000, quotationPrice: 1600, margin: 25 },
-  { id: 'brand4', name: 'Elegant Washrooms', clientPrice: 1800, quotationPrice: 1450, margin: 22 },
-  { id: 'brand5', name: 'Eco Bath Solutions', clientPrice: 1350, quotationPrice: 1100, margin: 18 },
-  { id: 'brand6', name: 'Designer Washrooms', clientPrice: 2200, quotationPrice: 1750, margin: 30 },
-];
-
-// Configuration values - in a real app these would come from the backend settings
-const PLUMBING_RATE_PER_SQFT = 50; // ₹50 per sq ft base rate
-const PLUMBING_RATES = {
-  complete: 1500,
-  fixtureOnly: 800
-};
-const TILE_COST_PER_UNIT = 80; // ₹80 per tile
-const TILING_LABOR_RATE = 85; // ₹85 per sq ft
-const TILE_SIZE_SQFT = 4; // Each 2x2 tile covers 4 sq ft
-
 const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
+  const [electricalFixturePricing, setElectricalFixturePricing] = useState<FixturePricing>({});
+  const [additionalFixturePricing, setAdditionalFixturePricing] = useState<FixturePricing>({});
+  const [calculatorSettings, setCalculatorSettings] = useState({
+    PLUMBING_RATE_PER_SQFT: 50,
+    TILE_COST_PER_UNIT: 80,
+    TILING_LABOR_RATE: 85,
+    TILE_SIZE_SQFT: 4
+  });
+  const [brands, setBrands] = useState<Brand[]>([
+    { id: 'brand1', name: 'Luxe Bathware', clientPrice: 1500, quotationPrice: 1200, margin: 20 },
+    { id: 'brand2', name: 'Modern Plumbing', clientPrice: 1200, quotationPrice: 950, margin: 15 },
+    { id: 'brand3', name: 'Premium Fixtures', clientPrice: 2000, quotationPrice: 1600, margin: 25 },
+    { id: 'brand4', name: 'Elegant Washrooms', clientPrice: 1800, quotationPrice: 1450, margin: 22 },
+    { id: 'brand5', name: 'Eco Bath Solutions', clientPrice: 1350, quotationPrice: 1100, margin: 18 },
+    { id: 'brand6', name: 'Designer Washrooms', clientPrice: 2200, quotationPrice: 1750, margin: 30 },
+  ]);
+  
   const [breakdown, setBreakdown] = useState<EstimateBreakdown>({
     basePrice: 0,
     electricalFixturesPrice: 0,
@@ -65,69 +50,146 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Calculate estimate
   useEffect(() => {
-    setTimeout(() => {
-      calculateEstimate();
-      setIsGenerating(false);
-      
-      // Simulate success state after calculation
+    Promise.all([
+      fetchFixtures(),
+      fetchCalculatorSettings()
+    ]).then(() => {
       setTimeout(() => {
-        setIsSuccess(true);
-      }, 500);
-    }, 1500);
+        calculateEstimate();
+        setIsGenerating(false);
+        
+        setTimeout(() => {
+          setIsSuccess(true);
+        }, 500);
+      }, 1500);
+    });
   }, []);
   
+  const fetchFixtures = async () => {
+    try {
+      const { data: electricalData, error: electricalError } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'electrical');
+
+      if (electricalError) throw electricalError;
+
+      const { data: bathroomData, error: bathroomError } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'bathroom');
+
+      if (bathroomError) throw bathroomError;
+
+      if (electricalData && electricalData.length > 0) {
+        const fixturesObj: FixturePricing = {};
+        electricalData.forEach(item => {
+          fixturesObj[item.fixture_id] = {
+            name: item.name,
+            price: item.price,
+            description: item.description
+          };
+        });
+        setElectricalFixturePricing(fixturesObj);
+      }
+
+      if (bathroomData && bathroomData.length > 0) {
+        const fixturesObj: FixturePricing = {};
+        bathroomData.forEach(item => {
+          fixturesObj[item.fixture_id] = {
+            name: item.name,
+            price: item.price,
+            description: item.description
+          };
+        });
+        setAdditionalFixturePricing(fixturesObj);
+      }
+    } catch (error) {
+      console.error('Error fetching fixtures:', error);
+      setElectricalFixturePricing({
+        ledMirror: { name: 'LED Mirror', price: 3500 },
+        exhaustFan: { name: 'Exhaust Fan', price: 1800 },
+        waterHeater: { name: 'Water Heater', price: 8000 }
+      });
+      
+      setAdditionalFixturePricing({
+        showerPartition: { name: 'Shower Partition', price: 15000, description: 'Glass shower partition with frame' },
+        vanity: { name: 'Vanity', price: 25000, description: 'Modern bathroom vanity with storage' },
+        bathtub: { name: 'Bathtub', price: 35000, description: 'Premium acrylic bathtub with fixtures' },
+        jacuzzi: { name: 'Jacuzzi', price: 55000, description: 'Premium jacuzzi with massage jets' },
+      });
+    }
+  };
+  
+  const fetchCalculatorSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('category', 'calculator')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setCalculatorSettings({
+          PLUMBING_RATE_PER_SQFT: data.settings.plumbingRatePerSqFt || 50,
+          TILE_COST_PER_UNIT: data.settings.tileCostPerUnit || 80,
+          TILING_LABOR_RATE: data.settings.tilingLaborRate || 85,
+          TILE_SIZE_SQFT: 4
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching calculator settings:', error);
+    }
+  };
+  
   const calculateEstimate = () => {
-    // Dimensions
     const { length, width, height } = formData.dimensions;
     
-    // Area calculations
     const floorArea = length * width;
     const wallArea = 2 * (length + width) * height;
     const totalArea = floorArea + wallArea;
     
-    // Tile quantity calculations 
-    const tileQuantityInitial = Math.ceil(totalArea / TILE_SIZE_SQFT);
-    const tileQuantityWithBreakage = Math.ceil(tileQuantityInitial * 1.1); // Adding 10% for breakage
+    const tileQuantityInitial = Math.ceil(totalArea / calculatorSettings.TILE_SIZE_SQFT);
+    const tileQuantityWithBreakage = Math.ceil(tileQuantityInitial * 1.1);
     
-    // Tile cost calculations
-    const tileMaterialCost = tileQuantityWithBreakage * TILE_COST_PER_UNIT;
-    const tilingLaborCost = totalArea * TILING_LABOR_RATE;
+    const tileMaterialCost = tileQuantityWithBreakage * calculatorSettings.TILE_COST_PER_UNIT;
+    const tilingLaborCost = totalArea * calculatorSettings.TILING_LABOR_RATE;
     const totalTilingCost = tileMaterialCost + tilingLaborCost;
     
-    // Electrical fixtures
     const electricalFixturesPrice = Object.entries(formData.electricalFixtures)
       .filter(([_, isSelected]) => isSelected)
       .reduce((sum, [fixture]) => {
-        return sum + electricalFixturePricing[fixture].price;
+        return sum + (electricalFixturePricing[fixture]?.price || 0);
       }, 0);
     
-    // Plumbing cost - now based on floor area
+    const PLUMBING_RATES = {
+      complete: 1500,
+      fixtureOnly: 800
+    };
     const plumbingFixturePrice = formData.plumbingRequirements ? 
       PLUMBING_RATES[formData.plumbingRequirements] : 0;
-    const plumbingAreaPrice = floorArea * PLUMBING_RATE_PER_SQFT;
+    const plumbingAreaPrice = floorArea * calculatorSettings.PLUMBING_RATE_PER_SQFT;
     const plumbingPrice = plumbingFixturePrice + plumbingAreaPrice;
     
-    // Additional fixtures
     const additionalFixturesPrice = Object.entries(formData.additionalFixtures)
       .filter(([_, isSelected]) => isSelected)
       .reduce((sum, [fixture]) => {
-        return sum + additionalFixturePricing[fixture].price;
+        return sum + (additionalFixturePricing[fixture]?.price || 0);
       }, 0);
     
-    // Brand premium
     const selectedBrand = brands.find(brand => brand.id === formData.brandSelection);
     const brandPremium = selectedBrand ? selectedBrand.clientPrice : 0;
     
-    // Base price - sum of foundation costs before discounts
-    const basePrice = 0; // We're calculating differently now
+    const basePrice = 0;
     
-    // Timeline discount
     const subtotal = electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium + totalTilingCost;
     const timelineDiscount = formData.projectTimeline === 'flexible' ? subtotal * 0.05 : 0;
     
-    // Total
     const total = subtotal - timelineDiscount;
     
     setBreakdown({
@@ -162,33 +224,36 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
     toast.success('Estimate PDF downloaded');
   };
   
-  const handleSaveSubmission = () => {
+  const handleSaveSubmission = async () => {
     setIsSaving(true);
     
-    // Mock saving data to backend
-    setTimeout(() => {
-      // In a real app, this would be an API call
-      const submission: Partial<CalcSubmission> = {
-        customerDetails: formData.customerDetails,
-        estimateAmount: breakdown.total,
-        formData: { ...formData },
-        breakdown: { ...breakdown },
-        status: 'new',
-        submittedAt: new Date().toISOString()
-      };
+    try {
+      const { data, error } = await supabase
+        .from('submissions')
+        .insert({
+          customer_details: formData.customerDetails,
+          estimate_amount: breakdown.total,
+          form_data: formData,
+          breakdown: breakdown,
+          status: 'new',
+          submitted_at: new Date().toISOString()
+        });
       
-      console.log('Saving submission:', submission);
+      if (error) throw error;
       
-      setIsSaving(false);
       toast.success('Submission saved successfully!');
-    }, 1500);
+    } catch (error) {
+      console.error('Error saving submission:', error);
+      toast.error('Failed to save submission. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   const handleStartNew = () => {
     onReset();
   };
   
-  // Format currency in INR
   const formatINR = (amount: number) => {
     return amount.toFixed(2);
   };
