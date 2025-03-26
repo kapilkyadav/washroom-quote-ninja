@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         data: metadata,
-        emailRedirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/auth`, // Changed emailRedirectTo to redirectTo
       },
     });
 
