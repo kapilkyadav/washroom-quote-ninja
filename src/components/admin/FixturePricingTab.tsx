@@ -1,21 +1,12 @@
+
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash, Save, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FixturePricing, FixtureType } from '@/types';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FixturePricing } from '@/types';
 import { supabase } from '@/lib/supabase';
+import FixtureTypeTab from './fixtures/FixtureTypeTab';
 
 interface FixturePricingTabProps {
   searchQuery: string;
@@ -84,6 +75,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         variant: "destructive",
       });
       
+      // Fallback data
       setElectricalFixtures({
         ledMirror: { name: 'LED Mirror', price: 3500, description: 'Modern LED mirror with touch controls' },
         exhaustFan: { name: 'Exhaust Fan', price: 1800, description: 'High-quality silent exhaust fan' },
@@ -332,339 +324,39 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
             <TabsTrigger value="bathroom">Bathroom Fixtures</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="electrical">
-            {isAddingNew && (
-              <div className="p-4 border rounded-md mb-4 bg-muted/30">
-                <h4 className="text-sm font-semibold mb-3">Add New Electrical Fixture</h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="id">Fixture ID</Label>
-                    <Input 
-                      id="id"
-                      name="id"
-                      value={newFixture.id}
-                      onChange={handleNewFixtureChange}
-                      placeholder="ledLight"
-                    />
-                    <p className="text-xs text-muted-foreground">Unique identifier, used in code</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Fixture Name</Label>
-                    <Input 
-                      id="name"
-                      name="name"
-                      value={newFixture.name}
-                      onChange={handleNewFixtureChange}
-                      placeholder="LED Light"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input 
-                      id="price"
-                      name="price"
-                      type="number"
-                      value={newFixture.price}
-                      onChange={handleNewFixtureChange}
-                      placeholder="1000"
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea 
-                      id="description"
-                      name="description"
-                      value={newFixture.description}
-                      onChange={handleNewFixtureChange}
-                      placeholder="Describe the fixture..."
-                      rows={2}
-                    />
-                  </div>
-                  <div className="sm:col-span-2 flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsAddingNew(false)}>Cancel</Button>
-                    <Button onClick={handleAddFixture}>Add Fixture</Button>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead className="text-right">Price (₹)</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredElectricalFixtures.length > 0 ? (
-                    filteredElectricalFixtures.map(([id, fixture]) => (
-                      <TableRow key={id}>
-                        <TableCell>
-                          {isEditing === id ? (
-                            <Input 
-                              name="name"
-                              value={editValues.name}
-                              onChange={handleEditChange}
-                            />
-                          ) : (
-                            fixture.name
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{id}</TableCell>
-                        <TableCell className="text-right">
-                          {isEditing === id ? (
-                            <Input 
-                              name="price"
-                              type="number"
-                              value={editValues.price}
-                              onChange={handleEditChange}
-                              className="w-24 ml-auto"
-                            />
-                          ) : (
-                            `₹${fixture.price.toLocaleString()}`
-                          )}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {isEditing === id ? (
-                            <Textarea 
-                              name="description"
-                              value={editValues.description}
-                              onChange={handleEditChange}
-                              rows={2}
-                            />
-                          ) : (
-                            fixture.description
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isEditing === id ? (
-                            <div className="flex space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleSaveEdit(id)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Save className="h-4 w-4" />
-                                <span className="sr-only">Save</span>
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={handleCancelEdit}
-                                className="h-8 w-8 p-0"
-                              >
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Cancel</span>
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleEditStart(id, fixture)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeleteFixture(id, fixture.name)}
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
-                              >
-                                <Trash className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                        No electrical fixtures found matching your search.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+          <FixtureTypeTab 
+            tabValue="electrical"
+            isAddingNew={isAddingNew && activeTab === 'electrical'}
+            fixtures={filteredElectricalFixtures}
+            isEditing={isEditing}
+            editValues={editValues}
+            newFixture={newFixture}
+            handleNewFixtureChange={handleNewFixtureChange}
+            handleAddFixture={handleAddFixture}
+            setIsAddingNew={setIsAddingNew}
+            handleEditStart={handleEditStart}
+            handleEditChange={handleEditChange}
+            handleSaveEdit={handleSaveEdit}
+            handleCancelEdit={handleCancelEdit}
+            handleDeleteFixture={handleDeleteFixture}
+          />
           
-          <TabsContent value="bathroom">
-            {isAddingNew && (
-              <div className="p-4 border rounded-md mb-4 bg-muted/30">
-                <h4 className="text-sm font-semibold mb-3">Add New Bathroom Fixture</h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="id">Fixture ID</Label>
-                    <Input 
-                      id="id"
-                      name="id"
-                      value={newFixture.id}
-                      onChange={handleNewFixtureChange}
-                      placeholder="showerHead"
-                    />
-                    <p className="text-xs text-muted-foreground">Unique identifier, used in code</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Fixture Name</Label>
-                    <Input 
-                      id="name"
-                      name="name"
-                      value={newFixture.name}
-                      onChange={handleNewFixtureChange}
-                      placeholder="Shower Head"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input 
-                      id="price"
-                      name="price"
-                      type="number"
-                      value={newFixture.price}
-                      onChange={handleNewFixtureChange}
-                      placeholder="5000"
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea 
-                      id="description"
-                      name="description"
-                      value={newFixture.description}
-                      onChange={handleNewFixtureChange}
-                      placeholder="Describe the fixture..."
-                      rows={2}
-                    />
-                  </div>
-                  <div className="sm:col-span-2 flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsAddingNew(false)}>Cancel</Button>
-                    <Button onClick={handleAddFixture}>Add Fixture</Button>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead className="text-right">Price (₹)</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBathroomFixtures.length > 0 ? (
-                    filteredBathroomFixtures.map(([id, fixture]) => (
-                      <TableRow key={id}>
-                        <TableCell>
-                          {isEditing === id ? (
-                            <Input 
-                              name="name"
-                              value={editValues.name}
-                              onChange={handleEditChange}
-                            />
-                          ) : (
-                            fixture.name
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{id}</TableCell>
-                        <TableCell className="text-right">
-                          {isEditing === id ? (
-                            <Input 
-                              name="price"
-                              type="number"
-                              value={editValues.price}
-                              onChange={handleEditChange}
-                              className="w-24 ml-auto"
-                            />
-                          ) : (
-                            `₹${fixture.price.toLocaleString()}`
-                          )}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {isEditing === id ? (
-                            <Textarea 
-                              name="description"
-                              value={editValues.description}
-                              onChange={handleEditChange}
-                              rows={2}
-                            />
-                          ) : (
-                            fixture.description
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isEditing === id ? (
-                            <div className="flex space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleSaveEdit(id)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Save className="h-4 w-4" />
-                                <span className="sr-only">Save</span>
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={handleCancelEdit}
-                                className="h-8 w-8 p-0"
-                              >
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Cancel</span>
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleEditStart(id, fixture)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeleteFixture(id, fixture.name)}
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive/90"
-                              >
-                                <Trash className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                        No bathroom fixtures found matching your search.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+          <FixtureTypeTab 
+            tabValue="bathroom"
+            isAddingNew={isAddingNew && activeTab === 'bathroom'}
+            fixtures={filteredBathroomFixtures}
+            isEditing={isEditing}
+            editValues={editValues}
+            newFixture={newFixture}
+            handleNewFixtureChange={handleNewFixtureChange}
+            handleAddFixture={handleAddFixture}
+            setIsAddingNew={setIsAddingNew}
+            handleEditStart={handleEditStart}
+            handleEditChange={handleEditChange}
+            handleSaveEdit={handleSaveEdit}
+            handleCancelEdit={handleCancelEdit}
+            handleDeleteFixture={handleDeleteFixture}
+          />
         </Tabs>
       )}
     </div>
