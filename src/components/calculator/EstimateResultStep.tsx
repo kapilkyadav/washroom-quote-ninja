@@ -1,34 +1,37 @@
+
 import { useEffect, useState } from 'react';
-import { CalculatorFormData, Brand, FixturePricing, EstimateBreakdown, CalcSubmission } from '@/types';
+import { Copy, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Check, Printer, Mail, Download, IndianRupee } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle, 
+  CardFooter 
+} from '@/components/ui/card';
+import { CalculatorFormData, Brand, EstimateBreakdown, CalcSubmission } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 interface EstimateResultStepProps {
   formData: CalculatorFormData;
-  onReset: () => void;
+  onSubmitAnother: () => void;
 }
 
-const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
-  const [electricalFixturePricing, setElectricalFixturePricing] = useState<FixturePricing>({});
-  const [additionalFixturePricing, setAdditionalFixturePricing] = useState<FixturePricing>({});
-  const [calculatorSettings, setCalculatorSettings] = useState({
-    PLUMBING_RATE_PER_SQFT: 50,
-    TILE_COST_PER_UNIT: 80,
-    TILING_LABOR_RATE: 85,
-    TILE_SIZE_SQFT: 4
-  });
-  const [brands, setBrands] = useState<Brand[]>([
-    { id: 'brand1', name: 'Luxe Bathware', clientPrice: 1500, quotationPrice: 1200, margin: 20 },
-    { id: 'brand2', name: 'Modern Plumbing', clientPrice: 1200, quotationPrice: 950, margin: 15 },
-    { id: 'brand3', name: 'Premium Fixtures', clientPrice: 2000, quotationPrice: 1600, margin: 25 },
-    { id: 'brand4', name: 'Elegant Washrooms', clientPrice: 1800, quotationPrice: 1450, margin: 22 },
-    { id: 'brand5', name: 'Eco Bath Solutions', clientPrice: 1350, quotationPrice: 1100, margin: 18 },
-    { id: 'brand6', name: 'Designer Washrooms', clientPrice: 2200, quotationPrice: 1750, margin: 30 },
-  ]);
-  
-  const [breakdown, setBreakdown] = useState<EstimateBreakdown>({
+const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepProps) => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [estimate, setEstimate] = useState<EstimateBreakdown>({
     basePrice: 0,
     electricalFixturesPrice: 0,
     plumbingPrice: 0,
@@ -45,154 +48,132 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
     totalTilingCost: 0,
     total: 0
   });
-  
-  const [isGenerating, setIsGenerating] = useState(true);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  
+  const [brands, setBrands] = useState<Record<string, Brand>>({
+    'premium': { id: 'premium', name: 'Premium', clientPrice: 1.3, quotationPrice: 1.35, margin: 1.05 },
+    'standard': { id: 'standard', name: 'Standard', clientPrice: 1, quotationPrice: 1.05, margin: 1.05 },
+    'budget': { id: 'budget', name: 'Budget', clientPrice: 0.9, quotationPrice: 0.95, margin: 1.05 }
+  });
+  const [electricalFixtures, setElectricalFixtures] = useState<Record<string, number>>({});
+  const [bathroomFixtures, setBathroomFixtures] = useState<Record<string, number>>({});
+  const [calculatorSettings, setCalculatorSettings] = useState({
+    plumbingRatePerSqFt: 50,
+    tileCostPerUnit: 80,
+    tilingLaborRate: 85
+  });
+
+  // Fetch all required data on component mount
   useEffect(() => {
-    Promise.all([
-      fetchFixtures(),
-      fetchCalculatorSettings()
-    ]).then(() => {
-      setTimeout(() => {
-        calculateEstimate();
-        setIsGenerating(false);
-        
-        setTimeout(() => {
-          setIsSuccess(true);
-        }, 500);
-      }, 1500);
-    });
+    fetchData();
   }, []);
-  
-  const fetchFixtures = async () => {
+
+  // Calculate estimate when data is loaded and when form data changes
+  useEffect(() => {
+    calculateEstimate();
+  }, [formData, electricalFixtures, bathroomFixtures, calculatorSettings]);
+
+  const fetchData = async () => {
     try {
-      const { data: electricalData, error: electricalError } = await supabase
-        .from('fixtures')
-        .select('*')
-        .eq('type', 'electrical');
-
-      if (electricalError) throw electricalError;
-
-      const { data: bathroomData, error: bathroomError } = await supabase
-        .from('fixtures')
-        .select('*')
-        .eq('type', 'bathroom');
-
-      if (bathroomError) throw bathroomError;
-
-      if (electricalData && electricalData.length > 0) {
-        const fixturesObj: FixturePricing = {};
-        electricalData.forEach(item => {
-          fixturesObj[item.fixture_id] = {
-            name: item.name,
-            price: item.price,
-            description: item.description
-          };
-        });
-        setElectricalFixturePricing(fixturesObj);
-      }
-
-      if (bathroomData && bathroomData.length > 0) {
-        const fixturesObj: FixturePricing = {};
-        bathroomData.forEach(item => {
-          fixturesObj[item.fixture_id] = {
-            name: item.name,
-            price: item.price,
-            description: item.description
-          };
-        });
-        setAdditionalFixturePricing(fixturesObj);
-      }
-    } catch (error) {
-      console.error('Error fetching fixtures:', error);
-      setElectricalFixturePricing({
-        ledMirror: { name: 'LED Mirror', price: 3500 },
-        exhaustFan: { name: 'Exhaust Fan', price: 1800 },
-        waterHeater: { name: 'Water Heater', price: 8000 }
-      });
-      
-      setAdditionalFixturePricing({
-        showerPartition: { name: 'Shower Partition', price: 15000, description: 'Glass shower partition with frame' },
-        vanity: { name: 'Vanity', price: 25000, description: 'Modern bathroom vanity with storage' },
-        bathtub: { name: 'Bathtub', price: 35000, description: 'Premium acrylic bathtub with fixtures' },
-        jacuzzi: { name: 'Jacuzzi', price: 55000, description: 'Premium jacuzzi with massage jets' },
-      });
-    }
-  };
-  
-  const fetchCalculatorSettings = async () => {
-    try {
-      const { data, error } = await supabase
+      // Fetch calculator settings
+      const { data: settingsData, error: settingsError } = await supabase
         .from('settings')
         .select('*')
         .eq('category', 'calculator')
         .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      
+      if (!settingsError && settingsData) {
+        setCalculatorSettings(settingsData.settings);
       }
 
-      if (data) {
-        setCalculatorSettings({
-          PLUMBING_RATE_PER_SQFT: data.settings.plumbingRatePerSqFt || 50,
-          TILE_COST_PER_UNIT: data.settings.tileCostPerUnit || 80,
-          TILING_LABOR_RATE: data.settings.tilingLaborRate || 85,
-          TILE_SIZE_SQFT: 4
+      // Fetch electrical fixtures
+      const { data: electricalData, error: electricalError } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'electrical');
+      
+      if (!electricalError && electricalData) {
+        const fixtures: Record<string, number> = {};
+        electricalData.forEach(item => {
+          fixtures[item.fixture_id] = item.price;
         });
+        setElectricalFixtures(fixtures);
+      }
+
+      // Fetch bathroom fixtures
+      const { data: bathroomData, error: bathroomError } = await supabase
+        .from('fixtures')
+        .select('*')
+        .eq('type', 'bathroom');
+      
+      if (!bathroomError && bathroomData) {
+        const fixtures: Record<string, number> = {};
+        bathroomData.forEach(item => {
+          fixtures[item.fixture_id] = item.price;
+        });
+        setBathroomFixtures(fixtures);
       }
     } catch (error) {
-      console.error('Error fetching calculator settings:', error);
+      console.error('Error fetching data for estimate calculation:', error);
     }
   };
-  
+
   const calculateEstimate = () => {
     const { length, width, height } = formData.dimensions;
     
+    // Calculate areas
     const floorArea = length * width;
     const wallArea = 2 * (length + width) * height;
     const totalArea = floorArea + wallArea;
     
-    const tileQuantityInitial = Math.ceil(totalArea / calculatorSettings.TILE_SIZE_SQFT);
+    // Calculate tile quantities with 10% extra for breakage
+    const tileQuantityInitial = Math.ceil(totalArea / 4); // Each tile covers 4 sq ft
     const tileQuantityWithBreakage = Math.ceil(tileQuantityInitial * 1.1);
     
-    const tileMaterialCost = tileQuantityWithBreakage * calculatorSettings.TILE_COST_PER_UNIT;
-    const tilingLaborCost = totalArea * calculatorSettings.TILING_LABOR_RATE;
+    // Calculate material and labor costs for tiling
+    const tileMaterialCost = tileQuantityWithBreakage * calculatorSettings.tileCostPerUnit;
+    const tilingLaborCost = totalArea * calculatorSettings.tilingLaborRate;
     const totalTilingCost = tileMaterialCost + tilingLaborCost;
     
-    const electricalFixturesPrice = Object.entries(formData.electricalFixtures)
-      .filter(([_, isSelected]) => isSelected)
-      .reduce((sum, [fixture]) => {
-        return sum + (electricalFixturePricing[fixture]?.price || 0);
-      }, 0);
+    // Calculate base price
+    const basePrice = totalTilingCost;
     
-    const PLUMBING_RATES = {
-      complete: 1500,
-      fixtureOnly: 800
-    };
-    const plumbingFixturePrice = formData.plumbingRequirements ? 
-      PLUMBING_RATES[formData.plumbingRequirements] : 0;
-    const plumbingAreaPrice = floorArea * calculatorSettings.PLUMBING_RATE_PER_SQFT;
-    const plumbingPrice = plumbingFixturePrice + plumbingAreaPrice;
+    // Calculate other components
+    let electricalFixturesPrice = 0;
+    Object.entries(formData.electricalFixtures).forEach(([key, isSelected]) => {
+      if (isSelected && electricalFixtures[key]) {
+        electricalFixturesPrice += electricalFixtures[key];
+      }
+    });
     
-    const additionalFixturesPrice = Object.entries(formData.additionalFixtures)
-      .filter(([_, isSelected]) => isSelected)
-      .reduce((sum, [fixture]) => {
-        return sum + (additionalFixturePricing[fixture]?.price || 0);
-      }, 0);
+    let additionalFixturesPrice = 0;
+    Object.entries(formData.additionalFixtures).forEach(([key, isSelected]) => {
+      if (isSelected && bathroomFixtures[key]) {
+        additionalFixturesPrice += bathroomFixtures[key];
+      }
+    });
     
-    const selectedBrand = brands.find(brand => brand.id === formData.brandSelection);
-    const brandPremium = selectedBrand ? selectedBrand.clientPrice : 0;
+    // Calculate plumbing price
+    let plumbingPrice = 0;
+    if (formData.plumbingRequirements === 'complete') {
+      plumbingPrice = floorArea * calculatorSettings.plumbingRatePerSqFt;
+    } else if (formData.plumbingRequirements === 'fixtureOnly') {
+      plumbingPrice = floorArea * calculatorSettings.plumbingRatePerSqFt * 0.6;
+    }
     
-    const basePrice = 0;
+    // Apply brand premium
+    const brandMultiplier = brands[formData.brandSelection]?.clientPrice || 1;
+    const brandPremium = (basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice) * (brandMultiplier - 1);
     
-    const subtotal = electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium + totalTilingCost;
-    const timelineDiscount = formData.projectTimeline === 'flexible' ? subtotal * 0.05 : 0;
+    // Apply timeline discount
+    let timelineDiscount = 0;
+    if (formData.projectTimeline === 'flexible') {
+      timelineDiscount = (basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium) * 0.05;
+    }
     
-    const total = subtotal - timelineDiscount;
+    // Calculate total
+    const total = basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium - timelineDiscount;
     
-    setBreakdown({
+    // Set the complete estimate breakdown
+    setEstimate({
       basePrice,
       electricalFixturesPrice,
       plumbingPrice,
@@ -210,262 +191,213 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
       total
     });
   };
-  
-  const handlePrint = () => {
-    window.print();
-    toast.success('Preparing document for printing');
-  };
-  
-  const handleEmailEstimate = () => {
-    toast.success('Estimate sent to your email');
-  };
-  
-  const handleDownload = () => {
-    toast.success('Estimate PDF downloaded');
-  };
-  
-  const handleSaveSubmission = async () => {
-    setIsSaving(true);
+
+  const handleSaveQuote = async () => {
+    if (isSubmitted) {
+      onSubmitAnother();
+      return;
+    }
+    
+    setIsSubmitting(true);
     
     try {
-      const { data, error } = await supabase
+      const submission: Omit<CalcSubmission, 'id'> = {
+        customerDetails: formData.customerDetails,
+        estimateAmount: estimate.total,
+        formData,
+        breakdown: estimate,
+        status: 'new',
+        submittedAt: new Date().toISOString()
+      };
+      
+      const { error } = await supabase
         .from('submissions')
-        .insert({
-          customer_details: formData.customerDetails,
-          estimate_amount: breakdown.total,
-          form_data: formData,
-          breakdown: breakdown,
-          status: 'new',
-          submitted_at: new Date().toISOString()
-        });
+        .insert(submission);
       
       if (error) throw error;
       
-      toast.success('Submission saved successfully!');
+      toast({
+        title: "Estimate saved!",
+        description: "Your estimate has been saved. You will hear from us soon.",
+        variant: "default",
+      });
+      
+      setIsSubmitted(true);
     } catch (error) {
       console.error('Error saving submission:', error);
-      toast.error('Failed to save submission. Please try again.');
+      toast({
+        title: "Error",
+        description: "There was a problem saving your estimate. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
     }
   };
-  
-  const handleStartNew = () => {
-    onReset();
-  };
-  
-  const formatINR = (amount: number) => {
-    return amount.toFixed(2);
-  };
-  
-  return (
-    <div className="py-4 animate-slide-in max-w-4xl mx-auto">
-      <h2 className="heading-2 text-center mb-8">Your Estimate</h2>
+
+  const handleCopyToClipboard = () => {
+    // Format estimate details
+    const estimateText = `
+      Bathroom Renovation Estimate
+      --------------------------
+      Customer: ${formData.customerDetails.name}
+      Email: ${formData.customerDetails.email}
+      Phone: ${formData.customerDetails.phone}
+      Location: ${formData.customerDetails.location}
       
-      {isGenerating ? (
-        <div className="glass-card rounded-xl p-8 text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
-          <p className="text-lg">Generating your estimate...</p>
-          <p className="text-muted-foreground">We're calculating the perfect solution for your washroom project.</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          <div className="glass-card rounded-xl p-8 relative overflow-hidden">
-            {isSuccess && (
-              <div className="absolute top-4 right-4 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                <Check className="w-4 h-4 mr-1" />
-                Estimate Ready
-              </div>
-            )}
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-xl font-medium mb-4">Estimate Breakdown</h3>
-                
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h4 className="font-medium mb-2">Fixture Costs</h4>
-                    <div className="space-y-2">
-                      {breakdown.electricalFixturesPrice > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Electrical Fixtures</span>
-                          <span className="flex items-center">
-                            <IndianRupee size={16} className="mr-1" />
-                            {formatINR(breakdown.electricalFixturesPrice)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {breakdown.plumbingPrice > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Plumbing ({formData.plumbingRequirements === 'complete' ? 'Complete' : 'Fixture Only'})</span>
-                          <span className="flex items-center">
-                            <IndianRupee size={16} className="mr-1" />
-                            {formatINR(breakdown.plumbingPrice)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {breakdown.additionalFixturesPrice > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Additional Fixtures</span>
-                          <span className="flex items-center">
-                            <IndianRupee size={16} className="mr-1" />
-                            {formatINR(breakdown.additionalFixturesPrice)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="border-b pb-2">
-                    <h4 className="font-medium mb-2">Tiling Work</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Floor Area</span>
-                        <span>{formatINR(breakdown.floorArea)} sq ft</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Wall Area</span>
-                        <span>{formatINR(breakdown.wallArea)} sq ft</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Area</span>
-                        <span>{formatINR(breakdown.totalArea)} sq ft</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Initial Tile Quantity</span>
-                        <span>{breakdown.tileQuantityInitial} tiles</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tile Quantity with 10% Breakage</span>
-                        <span>{breakdown.tileQuantityWithBreakage} tiles</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tile Material Cost</span>
-                        <span className="flex items-center">
-                          <IndianRupee size={16} className="mr-1" />
-                          {formatINR(breakdown.tileMaterialCost)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tiling Labor Cost</span>
-                        <span className="flex items-center">
-                          <IndianRupee size={16} className="mr-1" />
-                          {formatINR(breakdown.tilingLaborCost)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between font-medium">
-                        <span>Total Tiling Cost</span>
-                        <span className="flex items-center">
-                          <IndianRupee size={16} className="mr-1" />
-                          {formatINR(breakdown.totalTilingCost)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {breakdown.brandPremium > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Brand Premium ({brands.find(b => b.id === formData.brandSelection)?.name})</span>
-                      <span className="flex items-center">
-                        <IndianRupee size={16} className="mr-1" />
-                        {formatINR(breakdown.brandPremium)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {breakdown.timelineDiscount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Timeline Discount (5%)</span>
-                      <span className="flex items-center">
-                        <IndianRupee size={16} className="mr-1" />
-                        {formatINR(breakdown.timelineDiscount)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="pt-3 border-t border-border flex justify-between font-semibold text-lg">
-                    <span>Total Estimate</span>
-                    <span className="flex items-center">
-                      <IndianRupee size={16} className="mr-1" />
-                      {formatINR(breakdown.total)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-xl font-medium mb-4">Project Details</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Project Type</p>
-                    <p className="font-medium">{formData.projectType === 'new' ? 'New Construction' : 'Renovation'}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground">Dimensions</p>
-                    <p className="font-medium">{formData.dimensions.length} × {formData.dimensions.width} × {formData.dimensions.height} feet</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground">Timeline</p>
-                    <p className="font-medium">{formData.projectTimeline === 'standard' ? 'Standard (4 Weeks)' : 'Flexible (>4 Weeks)'}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground">Selected Brand</p>
-                    <p className="font-medium">{brands.find(b => b.id === formData.brandSelection)?.name || 'Not selected'}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground">Customer</p>
-                    <p className="font-medium">{formData.customerDetails.name}</p>
-                    <p className="text-sm">{formData.customerDetails.email}</p>
-                    <p className="text-sm">{formData.customerDetails.phone}</p>
-                    <p className="text-sm">{formData.customerDetails.location}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      Project Details:
+      - Type: ${formData.projectType === 'new' ? 'New Construction' : 'Renovation'}
+      - Dimensions: ${formData.dimensions.length}ft x ${formData.dimensions.width}ft x ${formData.dimensions.height}ft
+      - Brand: ${brands[formData.brandSelection]?.name || formData.brandSelection}
+      - Timeline: ${formData.projectTimeline === 'standard' ? 'Standard' : 'Flexible'}
+      
+      Estimate Breakdown:
+      - Tiling: ₹${Math.round(estimate.totalTilingCost).toLocaleString()}
+      - Electrical Fixtures: ₹${Math.round(estimate.electricalFixturesPrice).toLocaleString()}
+      - Plumbing: ₹${Math.round(estimate.plumbingPrice).toLocaleString()}
+      - Additional Fixtures: ₹${Math.round(estimate.additionalFixturesPrice).toLocaleString()}
+      - Brand Premium: ₹${Math.round(estimate.brandPremium).toLocaleString()}
+      - Timeline Discount: -₹${Math.round(estimate.timelineDiscount).toLocaleString()}
+      
+      Total Estimate: ₹${Math.round(estimate.total).toLocaleString()}
+    `.replace(/      /g, '');
+    
+    navigator.clipboard.writeText(estimateText);
+    
+    toast({
+      title: "Copied to clipboard",
+      description: "Estimate details have been copied to your clipboard.",
+      variant: "default",
+    });
+  };
+
+  // Function to format currency amounts
+  const formatCurrency = (amount: number) => {
+    return `₹${Math.round(amount).toLocaleString()}`;
+  };
+
+  return (
+    <div className="space-y-8 py-4 animate-slide-in">
+      <div className="text-center">
+        <h2 className="heading-2 mb-2">Your Bathroom Estimate</h2>
+        <p className="text-muted-foreground">
+          Below is the estimate for your bathroom project based on the information provided
+        </p>
+      </div>
+      
+      <div className="max-w-4xl mx-auto">
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex justify-between items-start">
+              <span>Estimate Summary</span>
+              <span className="text-2xl font-bold">{formatCurrency(estimate.total)}</span>
+            </CardTitle>
+            <CardDescription>
+              For {formData.dimensions.length}ft x {formData.dimensions.width}ft x {formData.dimensions.height}ft bathroom
+            </CardDescription>
+          </CardHeader>
           
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Button onClick={handleSaveSubmission} className="flex-1 gap-2" variant="default" disabled={isSaving}>
-              {isSaving ? (
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Tiling (Material & Labor)</TableCell>
+                  <TableCell className="text-right">{formatCurrency(estimate.totalTilingCost)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Electrical Fixtures</TableCell>
+                  <TableCell className="text-right">{formatCurrency(estimate.electricalFixturesPrice)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Plumbing</TableCell>
+                  <TableCell className="text-right">{formatCurrency(estimate.plumbingPrice)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Additional Fixtures</TableCell>
+                  <TableCell className="text-right">{formatCurrency(estimate.additionalFixturesPrice)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Brand Premium ({brands[formData.brandSelection]?.name || 'Standard'})</TableCell>
+                  <TableCell className="text-right">{formatCurrency(estimate.brandPremium)}</TableCell>
+                </TableRow>
+                {estimate.timelineDiscount > 0 && (
+                  <TableRow>
+                    <TableCell>Flexible Timeline Discount</TableCell>
+                    <TableCell className="text-right text-green-600">-{formatCurrency(estimate.timelineDiscount)}</TableCell>
+                  </TableRow>
+                )}
+                <TableRow className="font-bold">
+                  <TableCell>Total Estimate</TableCell>
+                  <TableCell className="text-right text-lg">{formatCurrency(estimate.total)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+            
+            <div className="mt-6 space-y-3 text-sm">
+              <p><span className="font-medium">Notes:</span> This estimate is valid for 30 days from today.</p>
+              <p>A site visit will be conducted before finalizing the quote to address specific requirements.</p>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="flex flex-col sm:flex-row gap-3 justify-between">
+            <div className="flex gap-3">
+              <Button variant="outline" size="sm" onClick={handleCopyToClipboard} className="gap-2">
+                <Copy className="h-4 w-4" />
+                Copy
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+            </div>
+            
+            <Button 
+              disabled={isSubmitting}
+              onClick={handleSaveQuote}
+              className="gap-2"
+            >
+              {isSubmitting ? (
+                <>Saving...</>
+              ) : isSubmitted ? (
                 <>
-                  <div className="h-4 w-4 border-2 border-current border-t-transparent animate-spin rounded-full"></div>
-                  Saving...
+                  <CheckCircle2 className="h-4 w-4" />
+                  Start New Estimate
                 </>
               ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  Save Submission
-                </>
+                <>Save Estimate</>
               )}
             </Button>
-            <Button onClick={handlePrint} className="flex-1 gap-2">
-              <Printer className="w-4 h-4" />
-              Print Estimate
-            </Button>
-            <Button onClick={handleEmailEstimate} className="flex-1 gap-2">
-              <Mail className="w-4 h-4" />
-              Email Estimate
-            </Button>
-            <Button onClick={handleDownload} className="flex-1 gap-2">
-              <Download className="w-4 h-4" />
-              Download PDF
-            </Button>
-          </div>
-          
-          <div className="text-center">
-            <Button onClick={handleStartNew} variant="outline">
-              Start New Estimate
-            </Button>
+          </CardFooter>
+        </Card>
+        
+        <div className="mt-8 space-y-4">
+          <h3 className="font-medium text-lg">Customer Information</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="p-4 border rounded-md">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Name</p>
+              <p>{formData.customerDetails.name}</p>
+            </div>
+            <div className="p-4 border rounded-md">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Email</p>
+              <p>{formData.customerDetails.email}</p>
+            </div>
+            <div className="p-4 border rounded-md">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Phone</p>
+              <p>{formData.customerDetails.phone}</p>
+            </div>
+            <div className="p-4 border rounded-md">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Location</p>
+              <p>{formData.customerDetails.location}</p>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

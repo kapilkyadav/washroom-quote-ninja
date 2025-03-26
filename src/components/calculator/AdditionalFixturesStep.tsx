@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { CalculatorFormData, FixturePricing } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Droplets, Square, Bath, Waves, IndianRupee } from 'lucide-react';
+import { Droplets, Bath, ShowerHead, Waves } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface AdditionalFixturesStepProps {
@@ -25,12 +26,12 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
     bathtub: {
       name: 'Bathtub',
       price: 35000,
-      description: 'Premium acrylic bathtub with fixtures'
+      description: 'Luxurious freestanding bathtub'
     },
     jacuzzi: {
       name: 'Jacuzzi',
       price: 55000,
-      description: 'Luxury jacuzzi with multiple jets and controls'
+      description: 'Premium jacuzzi with massage jets'
     }
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -78,9 +79,9 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
   const getIcon = (fixture: string) => {
     switch(fixture) {
       case 'showerPartition':
-        return <Droplets className="w-6 h-6 text-primary" />;
+        return <ShowerHead className="w-6 h-6 text-primary" />;
       case 'vanity':
-        return <Square className="w-6 h-6 text-primary" />;
+        return <Droplets className="w-6 h-6 text-primary" />;
       case 'bathtub':
         return <Bath className="w-6 h-6 text-primary" />;
       case 'jacuzzi':
@@ -130,10 +131,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
             <h3 className="font-medium text-lg mb-2">{fixture.name}</h3>
             <p className="text-muted-foreground text-sm mb-4">{fixture.description}</p>
             
-            <div className="flex items-center text-sm font-medium">
-              <IndianRupee className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <span>{fixture.price.toLocaleString('en-IN')}</span>
-            </div>
+            {/* Don't show actual backend pricing to customers */}
           </div>
         ))}
       </div>
@@ -147,10 +145,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
                   <span>{fixtures[fixture]?.name || fixture}</span>
-                  <span className="flex items-center">
-                    <IndianRupee className="h-3.5 w-3.5 mr-1" />
-                    {fixtures[fixture]?.price.toLocaleString('en-IN') || '0'}
-                  </span>
+                  {/* Don't show prices to customers */}
                 </li>
               ))}
           </ul>

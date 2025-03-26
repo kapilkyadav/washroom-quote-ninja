@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      fixtures: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          fixture_id: string
+          id: number
+          name: string
+          price: number
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          fixture_id: string
+          id?: number
+          name: string
+          price?: number
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          fixture_id?: string
+          id?: number
+          name?: string
+          price?: number
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -33,6 +66,66 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: number
+          settings: Json
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: number
+          settings?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: number
+          settings?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      submissions: {
+        Row: {
+          breakdown: Json
+          created_at: string | null
+          customer_details: Json
+          estimate_amount: number
+          form_data: Json
+          id: number
+          status: string
+          submitted_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          breakdown: Json
+          created_at?: string | null
+          customer_details: Json
+          estimate_amount: number
+          form_data: Json
+          id?: number
+          status?: string
+          submitted_at: string
+          updated_at?: string | null
+        }
+        Update: {
+          breakdown?: Json
+          created_at?: string | null
+          customer_details?: Json
+          estimate_amount?: number
+          form_data?: Json
+          id?: number
+          status?: string
+          submitted_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
