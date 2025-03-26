@@ -125,8 +125,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      // Fixed: Chain .eq() method before awaiting
-      const { error } = await supabase
+      // Complete query with filters before awaiting
+      const query = supabase
         .from('fixtures')
         .update({
           name: editValues.name,
@@ -135,6 +135,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         })
         .eq('fixture_id', id)
         .eq('type', fixtureType);
+      
+      const { error } = await query;
       
       if (error) throw error;
 
@@ -274,12 +276,14 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        // Fixed: Chain .eq() method before awaiting
-        const { error } = await supabase
+        // Complete query with filters before awaiting
+        const query = supabase
           .from('fixtures')
           .delete()
           .eq('fixture_id', id)
           .eq('type', fixtureType);
+        
+        const { error } = await query;
         
         if (error) throw error;
 
