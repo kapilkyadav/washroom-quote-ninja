@@ -44,7 +44,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
     try {
       const { data, error } = await supabase
         .from('fixtures')
-        .select()
+        .select('*')
         .eq('type', 'bathroom');
 
       if (error) throw error;

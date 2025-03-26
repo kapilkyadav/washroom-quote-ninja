@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -40,14 +41,14 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const { data: electricalData, error: electricalError } = await supabase
         .from('fixtures')
-        .select()
+        .select('*')
         .eq('type', 'electrical');
 
       if (electricalError) throw electricalError;
 
       const { data: bathroomData, error: bathroomError } = await supabase
         .from('fixtures')
-        .select()
+        .select('*')
         .eq('type', 'bathroom');
 
       if (bathroomError) throw bathroomError;
