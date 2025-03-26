@@ -36,6 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             description: "You have been signed out successfully.",
           });
         }
+        if (event === 'USER_UPDATED') {
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated successfully.",
+          });
+        }
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
@@ -58,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         data: metadata,
+        emailRedirectTo: `${window.location.origin}/auth`,
       },
     });
 
