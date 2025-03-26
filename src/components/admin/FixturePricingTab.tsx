@@ -124,15 +124,15 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      const { error } = await supabase
+      const query = supabase
         .from('fixtures')
         .update({
           name: editValues.name,
           price: editValues.price,
           description: editValues.description
-        })
-        .eq('fixture_id', id)
-        .eq('type', fixtureType);
+        });
+      
+      const { error } = await query.eq('fixture_id', id).eq('type', fixtureType);
       
       if (error) throw error;
 
@@ -272,11 +272,11 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        const { error } = await supabase
+        const query = supabase
           .from('fixtures')
-          .delete()
-          .eq('fixture_id', id)
-          .eq('type', fixtureType);
+          .delete();
+        
+        const { error } = await query.eq('fixture_id', id).eq('type', fixtureType);
         
         if (error) throw error;
 
@@ -672,3 +672,4 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
 };
 
 export default FixturePricingTab;
+
