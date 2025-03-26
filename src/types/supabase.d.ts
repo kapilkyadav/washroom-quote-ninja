@@ -35,6 +35,26 @@ declare module '@supabase/supabase-js' {
     status: number;
   }
 
+  export interface AdminUserManagement {
+    listUsers: () => Promise<{
+      data: { users: User[] };
+      error: ApiError | null;
+    }>;
+    createUser: (attributes: {
+      email: string;
+      password: string;
+      email_confirm?: boolean;
+      user_metadata?: Record<string, any>;
+    }) => Promise<{ data: { user: User | null }; error: ApiError | null }>;
+    updateUserById: (
+      uid: string,
+      attributes: { user_metadata?: Record<string, any>; banned?: boolean }
+    ) => Promise<{ data: { user: User | null }; error: ApiError | null }>;
+    deleteUser: (
+      uid: string
+    ) => Promise<{ data: { user: User | null }; error: ApiError | null }>;
+  }
+
   export interface SupabaseClient {
     auth: {
       signUp: (options: {
@@ -82,6 +102,8 @@ declare module '@supabase/supabase-js' {
       ) => {
         data: { subscription: { unsubscribe: () => void } };
       };
+      // Add the admin property
+      admin: AdminUserManagement;
     };
   }
 
