@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ChevronDown, Database, Home, Mail, Package, Settings, ShoppingCart, Users } from 'lucide-react';
+import { ChevronDown, Database, Home, Mail, Package, Settings, ShoppingCart, Users, DollarSign, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Header from '@/components/layout/Header';
@@ -17,6 +17,8 @@ import LeadsTab from '@/components/admin/LeadsTab';
 import UsersTab from '@/components/admin/UsersTab';
 import DataImportTab from '@/components/admin/DataImportTab';
 import SettingsTab from '@/components/admin/SettingsTab';
+import FixturePricingTab from '@/components/admin/FixturePricingTab';
+import SubmissionsTab from '@/components/admin/SubmissionsTab';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -30,8 +32,10 @@ const Admin = () => {
   // Tab options for the sidebar
   const tabOptions = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'submissions', label: 'Quote Submissions', icon: FileSpreadsheet },
     { id: 'projects', label: 'Projects', icon: Package },
     { id: 'brands', label: 'Brands & Products', icon: ShoppingCart },
+    { id: 'fixtures', label: 'Fixture Pricing', icon: DollarSign },
     { id: 'leads', label: 'Leads', icon: Mail },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'data', label: 'Data Import', icon: Database },
@@ -43,10 +47,14 @@ const Admin = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardTab />;
+      case 'submissions':
+        return <SubmissionsTab searchQuery={searchQuery} />;
       case 'projects':
         return <ProjectsTab searchQuery={searchQuery} />;
       case 'brands':
         return <BrandsTab searchQuery={searchQuery} />;
+      case 'fixtures':
+        return <FixturePricingTab searchQuery={searchQuery} />;
       case 'leads':
         return <LeadsTab searchQuery={searchQuery} />;
       case 'users':
@@ -123,7 +131,7 @@ const Admin = () => {
               {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
             </h1>
             
-            {activeTab !== 'dashboard' && activeTab !== 'settings' && activeTab !== 'data' && (
+            {['brands', 'projects', 'fixtures', 'leads', 'users', 'submissions'].includes(activeTab) && (
               <div className="flex items-center gap-3">
                 <Input 
                   placeholder="Search..." 
@@ -131,7 +139,6 @@ const Admin = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <Button>New</Button>
               </div>
             )}
           </div>

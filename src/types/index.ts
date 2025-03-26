@@ -55,3 +55,50 @@ export interface FixturePricing {
     description?: string;
   };
 }
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'manager' | 'sales' | 'support';
+  status: 'active' | 'inactive';
+  lastActive: string;
+  createdAt: string;
+  avatar?: string;
+}
+
+export interface CalcSubmission {
+  id: string;
+  customerDetails: {
+    name: string;
+    email: string;
+    phone: string;
+    location: string;
+  };
+  estimateAmount: number;
+  formData: CalculatorFormData;
+  status: 'new' | 'contacted' | 'qualified' | 'not-interested';
+  submittedAt: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  price: number;
+  brand_id: string;
+  category: string;
+  stock: number;
+  image_url?: string;
+  active: boolean;
+}
+
+export interface DataImportConfig {
+  mapping: Record<string, string>;
+  source: 'google_sheet' | 'excel' | 'csv';
+  sourceId?: string;
+  lastImport?: string;
+  autoSync: boolean;
+  syncInterval?: 'daily' | 'weekly' | 'monthly';
+}

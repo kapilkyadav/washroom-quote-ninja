@@ -1,7 +1,8 @@
+
+import { useState } from 'react';
 import { CalculatorFormData } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
 
 interface CustomerDetailsStepProps {
   formData: CalculatorFormData;
@@ -9,127 +10,116 @@ interface CustomerDetailsStepProps {
 }
 
 const CustomerDetailsStep = ({ formData, updateFormData }: CustomerDetailsStepProps) => {
-  const [errors, setErrors] = useState<{
-    name?: string;
-    email?: string;
-    phone?: string;
-    location?: string;
-  }>({});
-  
-  const validateEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
-  };
-  
-  const validatePhone = (phone: string) => {
-    const digitsOnly = phone.replace(/\D/g, '');
-    return digitsOnly.length === 10;
-  };
-  
-  const handleInputChange = (field: keyof typeof formData.customerDetails, value: string) => {
-    setErrors(prev => ({ ...prev, [field]: undefined }));
+  const [validationErrors, setValidationErrors] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     
-    if (field === 'email' && value && !validateEmail(value)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+    // Validate inputs
+    let error = '';
+    if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      error = 'Please enter a valid email address';
     }
     
-    if (field === 'phone' && value && !validatePhone(value)) {
-      setErrors(prev => ({ ...prev, phone: 'Please enter a valid 10-digit mobile number' }));
-    }
+    setValidationErrors(prev => ({ ...prev, [name]: error }));
     
-    const updatedDetails = {
+    // Update form data
+    updateFormData('customerDetails', {
       ...formData.customerDetails,
-      [field]: value
-    };
-    
-    updateFormData('customerDetails', updatedDetails);
+      [name]: value,
+    });
   };
-  
-  const formatPhoneNumber = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, '');
-    const limitedDigits = digitsOnly.slice(0, 10);
-    
-    if (limitedDigits.length === 0) {
-      return '+91 ';
-    } else {
-      return `+91 ${limitedDigits}`;
-    }
-  };
-  
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let inputValue = e.target.value;
-    
-    if (!inputValue.startsWith('+91')) {
-      inputValue = '+91 ' + inputValue.replace(/^\+91\s?/, '');
-    }
-    
-    const formattedValue = formatPhoneNumber(inputValue);
-    handleInputChange('phone', formattedValue);
-  };
-  
+
   return (
-    <div className="space-y-6 py-4 animate-slide-in">
-      <h2 className="heading-2 text-center mb-8">Your Details</h2>
-      
-      <div className="max-w-lg mx-auto glass-card rounded-xl p-8">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-base">Full Name</Label>
-            <Input
-              id="name"
-              placeholder="Enter your full name"
-              value={formData.customerDetails.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className="input-field h-12"
-            />
-            {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-base">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={formData.customerDetails.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className="input-field h-12"
-            />
-            {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="text-base">Phone Number</Label>
-            <Input
-              id="phone"
-              placeholder="+91 "
-              value={formData.customerDetails.phone || '+91 '}
-              onChange={handlePhoneChange}
-              className="input-field h-12"
-            />
-            {errors.phone && <p className="text-destructive text-sm">{errors.phone}</p>}
-            <p className="text-xs text-muted-foreground">Enter a 10-digit Indian mobile number</p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="location" className="text-base">Location</Label>
-            <Input
-              id="location"
-              placeholder="City, State"
-              value={formData.customerDetails.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-              className="input-field h-12"
-            />
-            {errors.location && <p className="text-destructive text-sm">{errors.location}</p>}
-          </div>
+    <div className="space-y-6">
+      <div className="space-y-2 text-center">
+        <h2 className="text-3xl font-bold">Your Contact Information</h2>
+        <p className="text-muted-foreground">
+          We need your details to provide you with a personalized quote.
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="name">Full Name</Label>
+          <Input
+            id="name"
+            name="name"
+            placeholder="Your name"
+            value={formData.customerDetails.name}
+            onChange={handleInputChange}
+            required
+          />
+          {validationErrors.name && (
+            <p className="text-sm text-destructive">{validationErrors.name}</p>
+          )}
         </div>
-        
-        <div className="mt-8 pt-6 border-t border-border">
-          <p className="text-sm text-muted-foreground">
-            By submitting this form, you agree to receive your personalized washroom estimate.
-            We'll securely store your information in accordance with our privacy policy.
-          </p>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email Address</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="your.email@example.com"
+            value={formData.customerDetails.email}
+            onChange={handleInputChange}
+            required
+          />
+          {validationErrors.email && (
+            <p className="text-sm text-destructive">{validationErrors.email}</p>
+          )}
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Mobile Number</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            placeholder="+91 98765 43210"
+            value={formData.customerDetails.phone}
+            onChange={handleInputChange}
+            required
+          />
+          {validationErrors.phone && (
+            <p className="text-sm text-destructive">{validationErrors.phone}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="location">Location</Label>
+          <Input
+            id="location"
+            name="location"
+            placeholder="City, State"
+            value={formData.customerDetails.location}
+            onChange={handleInputChange}
+            required
+          />
+          {validationErrors.location && (
+            <p className="text-sm text-destructive">{validationErrors.location}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground mt-4">
+        <p>
+          By providing your contact information, you agree to our{' '}
+          <a href="#" className="text-primary underline">
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a href="#" className="text-primary underline">
+            Privacy Policy
+          </a>
+          .
+        </p>
       </div>
     </div>
   );

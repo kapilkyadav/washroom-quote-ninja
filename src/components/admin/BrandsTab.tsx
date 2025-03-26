@@ -17,7 +17,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from '@/hooks/use-toast';
+import BrandForm from './BrandForm';
 
 // Sample data
 const sampleBrands: Brand[] = [
@@ -34,28 +45,45 @@ interface BrandsTabProps {
 
 const BrandsTab = ({ searchQuery }: BrandsTabProps) => {
   const [brands, setBrands] = useState<Brand[]>(sampleBrands);
+  const [isAddBrandOpen, setIsAddBrandOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
   
   // Filter brands based on search query
   const filteredBrands = brands.filter(brand => 
     brand.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleEdit = (brand: Brand) => {
-    setEditingBrand(brand);
-    // Here you would normally open a modal or form for editing
-    toast({
-      title: "Edit Brand",
-      description: `Editing ${brand.name}`,
-    });
+  const handleAddBrand = (brand: Brand) => {
+    setBrands([...brands, brand]);
   };
   
-  const handleDelete = (brandId: string) => {
-    // Here you would normally show a confirmation dialog
-    setBrands(brands.filter(brand => brand.id !== brandId));
+  const handleEditBrand = (brand: Brand) => {
+    setBrands(brands.map(b => b.id === brand.id ? brand : b));
+    setEditingBrand(null);
+  };
+  
+  const openEditDialog = (brand: Brand) => {
+    setEditingBrand(brand);
+    setIsAddBrandOpen(true);
+  };
+  
+  const openDeleteDialog = (brand: Brand) => {
+    setBrandToDelete(brand);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteBrand = () => {
+    if (!brandToDelete) return;
+    
+    setBrands(brands.filter(brand => brand.id !== brandToDelete.id));
+    setIsDeleteDialogOpen(false);
+    setBrandToDelete(null);
+    
     toast({
       title: "Brand Deleted",
-      description: "The brand has been removed",
+      description: `${brandToDelete.name} has been removed`,
       variant: "destructive",
     });
   };
@@ -63,8 +91,11 @@ const BrandsTab = ({ searchQuery }: BrandsTabProps) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Manage Brands</h3>
-        <Button className="flex items-center gap-2">
+        <div>
+          <h3 className="text-lg font-semibold">Manage Brands</h3>
+          <p className="text-sm text-muted-foreground">Add, edit, and manage brands and their pricing</p>
+        </div>
+        <Button className="flex items-center gap-2" onClick={() => setIsAddBrandOpen(true)}>
           <Plus size={16} />
           Add Brand
         </Button>
@@ -98,12 +129,12 @@ const BrandsTab = ({ searchQuery }: BrandsTabProps) => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(brand)}>
+                        <DropdownMenuItem onClick={() => openEditDialog(brand)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => handleDelete(brand.id)}
+                          onClick={() => openDeleteDialog(brand)}
                           className="text-destructive"
                         >
                           <Trash className="mr-2 h-4 w-4" />
@@ -124,6 +155,36 @@ const BrandsTab = ({ searchQuery }: BrandsTabProps) => {
           </TableBody>
         </Table>
       </div>
+      
+      {/* Add/Edit Brand Dialog */}
+      <BrandForm 
+        open={isAddBrandOpen} 
+        onOpenChange={setIsAddBrandOpen}
+        onSuccess={editingBrand ? handleEditBrand : handleAddBrand}
+        editingBrand={editingBrand}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the brand "{brandToDelete?.name}". 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteBrand}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
