@@ -33,11 +33,15 @@ const brands: Brand[] = [
   { id: 'brand6', name: 'Designer Washrooms', clientPrice: 2200, quotationPrice: 1750, margin: 30 },
 ];
 
-const BASE_RATE_PER_SQFT = 50; // ₹50 per sq ft base rate
+// Configuration values - in a real app these would come from the backend settings
+const PLUMBING_RATE_PER_SQFT = 50; // ₹50 per sq ft base rate
 const PLUMBING_RATES = {
   complete: 1500,
   fixtureOnly: 800
 };
+const TILE_COST_PER_UNIT = 80; // ₹80 per tile
+const TILING_LABOR_RATE = 85; // ₹85 per sq ft
+const TILE_SIZE_SQFT = 4; // Each 2x2 tile covers 4 sq ft
 
 const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
   const [breakdown, setBreakdown] = useState<EstimateBreakdown>({
@@ -47,11 +51,20 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
     additionalFixturesPrice: 0,
     brandPremium: 0,
     timelineDiscount: 0,
+    floorArea: 0,
+    wallArea: 0,
+    totalArea: 0,
+    tileQuantityInitial: 0,
+    tileQuantityWithBreakage: 0,
+    tileMaterialCost: 0,
+    tilingLaborCost: 0,
+    totalTilingCost: 0,
     total: 0
   });
   
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Calculate estimate
   useEffect(() => {
@@ -67,10 +80,22 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
   }, []);
   
   const calculateEstimate = () => {
-    // Area calculation
-    const { length, width } = formData.dimensions;
-    const area = length * width;
-    const basePrice = area * BASE_RATE_PER_SQFT;
+    // Dimensions
+    const { length, width, height } = formData.dimensions;
+    
+    // Area calculations
+    const floorArea = length * width;
+    const wallArea = 2 * (length + width) * height;
+    const totalArea = floorArea + wallArea;
+    
+    // Tile quantity calculations 
+    const tileQuantityInitial = Math.ceil(totalArea / TILE_SIZE_SQFT);
+    const tileQuantityWithBreakage = Math.ceil(tileQuantityInitial * 1.1); // Adding 10% for breakage
+    
+    // Tile cost calculations
+    const tileMaterialCost = tileQuantityWithBreakage * TILE_COST_PER_UNIT;
+    const tilingLaborCost = totalArea * TILING_LABOR_RATE;
+    const totalTilingCost = tileMaterialCost + tilingLaborCost;
     
     // Electrical fixtures
     const electricalFixturesPrice = Object.entries(formData.electricalFixtures)
@@ -79,9 +104,11 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
         return sum + electricalFixturePricing[fixture].price;
       }, 0);
     
-    // Plumbing
-    const plumbingPrice = formData.plumbingRequirements ? 
+    // Plumbing cost - now based on floor area
+    const plumbingFixturePrice = formData.plumbingRequirements ? 
       PLUMBING_RATES[formData.plumbingRequirements] : 0;
+    const plumbingAreaPrice = floorArea * PLUMBING_RATE_PER_SQFT;
+    const plumbingPrice = plumbingFixturePrice + plumbingAreaPrice;
     
     // Additional fixtures
     const additionalFixturesPrice = Object.entries(formData.additionalFixtures)
@@ -94,8 +121,11 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
     const selectedBrand = brands.find(brand => brand.id === formData.brandSelection);
     const brandPremium = selectedBrand ? selectedBrand.clientPrice : 0;
     
+    // Base price - sum of foundation costs before discounts
+    const basePrice = 0; // We're calculating differently now
+    
     // Timeline discount
-    const subtotal = basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium;
+    const subtotal = electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium + totalTilingCost;
     const timelineDiscount = formData.projectTimeline === 'flexible' ? subtotal * 0.05 : 0;
     
     // Total
@@ -108,6 +138,14 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
       additionalFixturesPrice,
       brandPremium,
       timelineDiscount,
+      floorArea,
+      wallArea,
+      totalArea,
+      tileQuantityInitial,
+      tileQuantityWithBreakage,
+      tileMaterialCost,
+      tilingLaborCost,
+      totalTilingCost,
       total
     });
   };
@@ -123,6 +161,28 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
   
   const handleDownload = () => {
     toast.success('Estimate PDF downloaded');
+  };
+  
+  const handleSaveSubmission = () => {
+    setIsSaving(true);
+    
+    // Mock saving data to backend
+    setTimeout(() => {
+      // In a real app, this would be an API call
+      const submission: Partial<CalcSubmission> = {
+        customerDetails: formData.customerDetails,
+        estimateAmount: breakdown.total,
+        formData: { ...formData },
+        breakdown: { ...breakdown },
+        status: 'new',
+        submittedAt: new Date().toISOString()
+      };
+      
+      console.log('Saving submission:', submission);
+      
+      setIsSaving(false);
+      toast.success('Submission saved successfully!');
+    }, 1500);
   };
   
   const handleStartNew = () => {
@@ -158,44 +218,88 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
               <div>
                 <h3 className="text-xl font-medium mb-4">Estimate Breakdown</h3>
                 
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Base Price ({formData.dimensions.length} × {formData.dimensions.width} sq ft)</span>
-                    <span className="flex items-center">
-                      <IndianRupee size={16} className="mr-1" />
-                      {formatINR(breakdown.basePrice)}
-                    </span>
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h4 className="font-medium mb-2">Fixture Costs</h4>
+                    <div className="space-y-2">
+                      {breakdown.electricalFixturesPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Electrical Fixtures</span>
+                          <span className="flex items-center">
+                            <IndianRupee size={16} className="mr-1" />
+                            {formatINR(breakdown.electricalFixturesPrice)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {breakdown.plumbingPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Plumbing ({formData.plumbingRequirements === 'complete' ? 'Complete' : 'Fixture Only'})</span>
+                          <span className="flex items-center">
+                            <IndianRupee size={16} className="mr-1" />
+                            {formatINR(breakdown.plumbingPrice)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {breakdown.additionalFixturesPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Additional Fixtures</span>
+                          <span className="flex items-center">
+                            <IndianRupee size={16} className="mr-1" />
+                            {formatINR(breakdown.additionalFixturesPrice)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  {breakdown.electricalFixturesPrice > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Electrical Fixtures</span>
-                      <span className="flex items-center">
-                        <IndianRupee size={16} className="mr-1" />
-                        {formatINR(breakdown.electricalFixturesPrice)}
-                      </span>
+                  <div className="border-b pb-2">
+                    <h4 className="font-medium mb-2">Tiling Work</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Floor Area</span>
+                        <span>{formatINR(breakdown.floorArea)} sq ft</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Wall Area</span>
+                        <span>{formatINR(breakdown.wallArea)} sq ft</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Total Area</span>
+                        <span>{formatINR(breakdown.totalArea)} sq ft</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Initial Tile Quantity</span>
+                        <span>{breakdown.tileQuantityInitial} tiles</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Tile Quantity with 10% Breakage</span>
+                        <span>{breakdown.tileQuantityWithBreakage} tiles</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tile Material Cost</span>
+                        <span className="flex items-center">
+                          <IndianRupee size={16} className="mr-1" />
+                          {formatINR(breakdown.tileMaterialCost)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tiling Labor Cost</span>
+                        <span className="flex items-center">
+                          <IndianRupee size={16} className="mr-1" />
+                          {formatINR(breakdown.tilingLaborCost)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Total Tiling Cost</span>
+                        <span className="flex items-center">
+                          <IndianRupee size={16} className="mr-1" />
+                          {formatINR(breakdown.totalTilingCost)}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                  
-                  {breakdown.plumbingPrice > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Plumbing ({formData.plumbingRequirements === 'complete' ? 'Complete' : 'Fixture Only'})</span>
-                      <span className="flex items-center">
-                        <IndianRupee size={16} className="mr-1" />
-                        {formatINR(breakdown.plumbingPrice)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {breakdown.additionalFixturesPrice > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Additional Fixtures</span>
-                      <span className="flex items-center">
-                        <IndianRupee size={16} className="mr-1" />
-                        {formatINR(breakdown.additionalFixturesPrice)}
-                      </span>
-                    </div>
-                  )}
+                  </div>
                   
                   {breakdown.brandPremium > 0 && (
                     <div className="flex justify-between">
@@ -264,6 +368,19 @@ const EstimateResultStep = ({ formData, onReset }: EstimateResultStepProps) => {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center">
+            <Button onClick={handleSaveSubmission} className="flex-1 gap-2" variant="default" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-current border-t-transparent animate-spin rounded-full"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Save Submission
+                </>
+              )}
+            </Button>
             <Button onClick={handlePrint} className="flex-1 gap-2">
               <Printer className="w-4 h-4" />
               Print Estimate

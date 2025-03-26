@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CalculatorSettings } from '@/types';
 
 const SettingsTab = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -36,12 +37,10 @@ const SettingsTab = () => {
     reminderEmails: false,
   });
   
-  const [calculatorSettings, setCalculatorSettings] = useState({
-    baseRate: 1250,
-    luxuryPremium: 25,
-    standardDiscount: 10,
-    quickServiceFee: 15,
-    minimumOrderValue: 15000,
+  const [calculatorSettings, setCalculatorSettings] = useState<CalculatorSettings>({
+    plumbingRatePerSqFt: 50,
+    tileCostPerUnit: 80,
+    tilingLaborRate: 85,
   });
   
   const saveGeneralSettings = () => {
@@ -229,65 +228,39 @@ const SettingsTab = () => {
               
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <FormLabel>Base Rate (₹ per sq ft)</FormLabel>
+                  <FormLabel>Plumbing Rate (₹ per sq ft)</FormLabel>
                   <Input 
                     type="number"
-                    value={calculatorSettings.baseRate} 
-                    onChange={(e) => setCalculatorSettings({...calculatorSettings, baseRate: Number(e.target.value)})}
+                    value={calculatorSettings.plumbingRatePerSqFt} 
+                    onChange={(e) => setCalculatorSettings({...calculatorSettings, plumbingRatePerSqFt: Number(e.target.value)})}
                   />
                   <FormDescription>
-                    The standard rate used for basic calculations
+                    The rate used for plumbing based on floor area
                   </FormDescription>
                 </div>
                 
                 <div className="space-y-2">
-                  <FormLabel>Luxury Brand Premium (%)</FormLabel>
+                  <FormLabel>Tile Cost (₹ per unit)</FormLabel>
                   <Input 
                     type="number"
-                    value={calculatorSettings.luxuryPremium} 
-                    onChange={(e) => setCalculatorSettings({...calculatorSettings, luxuryPremium: Number(e.target.value)})}
+                    value={calculatorSettings.tileCostPerUnit} 
+                    onChange={(e) => setCalculatorSettings({...calculatorSettings, tileCostPerUnit: Number(e.target.value)})}
                   />
                   <FormDescription>
-                    Additional percentage for luxury brand selections
-                  </FormDescription>
-                </div>
-              </div>
-              
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <FormLabel>Standard Discount (%)</FormLabel>
-                  <Input 
-                    type="number"
-                    value={calculatorSettings.standardDiscount} 
-                    onChange={(e) => setCalculatorSettings({...calculatorSettings, standardDiscount: Number(e.target.value)})}
-                  />
-                  <FormDescription>
-                    Discount applied for standard timeline projects
-                  </FormDescription>
-                </div>
-                
-                <div className="space-y-2">
-                  <FormLabel>Quick Service Fee (%)</FormLabel>
-                  <Input 
-                    type="number"
-                    value={calculatorSettings.quickServiceFee} 
-                    onChange={(e) => setCalculatorSettings({...calculatorSettings, quickServiceFee: Number(e.target.value)})}
-                  />
-                  <FormDescription>
-                    Additional fee for expedited projects
+                    Cost of each 2x2 tile (covering 4 sq ft)
                   </FormDescription>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <FormLabel>Minimum Order Value (₹)</FormLabel>
+                <FormLabel>Tiling Labor Rate (₹ per sq ft)</FormLabel>
                 <Input 
                   type="number"
-                  value={calculatorSettings.minimumOrderValue} 
-                  onChange={(e) => setCalculatorSettings({...calculatorSettings, minimumOrderValue: Number(e.target.value)})}
+                  value={calculatorSettings.tilingLaborRate} 
+                  onChange={(e) => setCalculatorSettings({...calculatorSettings, tilingLaborRate: Number(e.target.value)})}
                 />
                 <FormDescription>
-                  The minimum project value to be quoted
+                  The labor cost for tiling per square foot
                 </FormDescription>
               </div>
               

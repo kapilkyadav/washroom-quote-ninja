@@ -21,6 +21,12 @@ const DimensionsStep = ({ formData, updateFormData }: DimensionsStepProps) => {
     // Clear previous errors
     setError(prev => ({...prev, [field]: undefined}));
     
+    // Check if it's a valid number
+    if (value && !/^\d*\.?\d*$/.test(value)) {
+      setError(prev => ({...prev, [field]: 'Please enter a valid number'}));
+      return;
+    }
+    
     // Convert to number and validate
     const numValue = parseFloat(value);
     
@@ -69,6 +75,8 @@ const DimensionsStep = ({ formData, updateFormData }: DimensionsStepProps) => {
   }, []);
   
   const areaSquareFeet = (parseFloat(length) || 0) * (parseFloat(width) || 0);
+  const wallArea = 2 * ((parseFloat(length) || 0) + (parseFloat(width) || 0)) * 9; // Wall area calculation
+  const totalArea = areaSquareFeet + wallArea;
   
   return (
     <div className="space-y-6 py-4 animate-slide-in">
@@ -80,8 +88,8 @@ const DimensionsStep = ({ formData, updateFormData }: DimensionsStepProps) => {
             <Label htmlFor="length">Length (feet)</Label>
             <Input
               id="length"
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               placeholder="Enter length"
               value={length}
               onChange={(e) => validateAndUpdate('length', e.target.value)}
@@ -94,8 +102,8 @@ const DimensionsStep = ({ formData, updateFormData }: DimensionsStepProps) => {
             <Label htmlFor="width">Width (feet)</Label>
             <Input
               id="width"
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               placeholder="Enter width"
               value={width}
               onChange={(e) => validateAndUpdate('width', e.target.value)}
@@ -119,8 +127,10 @@ const DimensionsStep = ({ formData, updateFormData }: DimensionsStepProps) => {
           {isNaN(areaSquareFeet) || areaSquareFeet <= 0 ? (
             <p className="text-muted-foreground mt-4">Enter valid dimensions to see the total area</p>
           ) : (
-            <div className="mt-4 p-4 bg-secondary/50 rounded-lg">
-              <p className="text-lg font-medium">Total Area: <span className="font-semibold text-primary">{areaSquareFeet.toFixed(2)} sq ft</span></p>
+            <div className="mt-4 p-4 bg-secondary/50 rounded-lg space-y-2">
+              <p className="text-base">Floor Area: <span className="font-semibold text-primary">{areaSquareFeet.toFixed(2)} sq ft</span></p>
+              <p className="text-base">Wall Area: <span className="font-semibold text-primary">{wallArea.toFixed(2)} sq ft</span></p>
+              <p className="text-lg font-medium pt-2 border-t">Total Area: <span className="font-semibold text-primary">{totalArea.toFixed(2)} sq ft</span></p>
             </div>
           )}
         </div>

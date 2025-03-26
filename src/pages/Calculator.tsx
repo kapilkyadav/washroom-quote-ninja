@@ -16,6 +16,7 @@ import TimelineStep from '@/components/calculator/TimelineStep';
 import BrandSelectionStep from '@/components/calculator/BrandSelectionStep';
 import CustomerDetailsStep from '@/components/calculator/CustomerDetailsStep';
 import EstimateResultStep from '@/components/calculator/EstimateResultStep';
+import { toast } from 'sonner';
 
 const Calculator = () => {
   const navigate = useNavigate();
@@ -92,6 +93,14 @@ const Calculator = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(prev => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Save form progress to local storage
+      try {
+        localStorage.setItem('calculatorFormData', JSON.stringify(formData));
+        localStorage.setItem('calculatorStep', String(currentStep + 1));
+      } catch (error) {
+        console.error('Error saving form data to local storage:', error);
+      }
     }
   };
   
@@ -100,6 +109,13 @@ const Calculator = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Update step in local storage
+      try {
+        localStorage.setItem('calculatorStep', String(currentStep - 1));
+      } catch (error) {
+        console.error('Error saving step to local storage:', error);
+      }
     }
   };
   
@@ -135,6 +151,16 @@ const Calculator = () => {
     });
     setCurrentStep(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Clear saved data from local storage
+    try {
+      localStorage.removeItem('calculatorFormData');
+      localStorage.removeItem('calculatorStep');
+    } catch (error) {
+      console.error('Error clearing local storage:', error);
+    }
+    
+    toast.success('Started a new quote calculation');
   };
   
   // Render the current step

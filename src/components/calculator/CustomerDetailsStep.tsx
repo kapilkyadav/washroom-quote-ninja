@@ -24,6 +24,8 @@ const CustomerDetailsStep = ({ formData, updateFormData }: CustomerDetailsStepPr
     let error = '';
     if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       error = 'Please enter a valid email address';
+    } else if (name === 'phone' && value && !/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,10}[-\s.]?[0-9]{1,10}$/.test(value)) {
+      error = 'Please enter a valid phone number';
     }
     
     setValidationErrors(prev => ({ ...prev, [name]: error }));

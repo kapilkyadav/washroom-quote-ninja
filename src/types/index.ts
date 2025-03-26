@@ -43,6 +43,15 @@ export interface EstimateBreakdown {
   additionalFixturesPrice: number;
   brandPremium: number;
   timelineDiscount: number;
+  // New fields for tiling and detailed calculations
+  floorArea: number;
+  wallArea: number;
+  totalArea: number;
+  tileQuantityInitial: number;
+  tileQuantityWithBreakage: number;
+  tileMaterialCost: number;
+  tilingLaborCost: number;
+  totalTilingCost: number;
   total: number;
 }
 
@@ -77,6 +86,7 @@ export interface CalcSubmission {
   };
   estimateAmount: number;
   formData: CalculatorFormData;
+  breakdown: EstimateBreakdown;
   status: 'new' | 'contacted' | 'qualified' | 'not-interested';
   submittedAt: string;
 }
@@ -101,4 +111,10 @@ export interface DataImportConfig {
   lastImport?: string;
   autoSync: boolean;
   syncInterval?: 'daily' | 'weekly' | 'monthly';
+}
+
+export interface CalculatorSettings {
+  plumbingRatePerSqFt: number;
+  tileCostPerUnit: number;
+  tilingLaborRate: number;
 }

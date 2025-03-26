@@ -2,7 +2,7 @@
 import { CalculatorFormData, FixturePricing } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Droplets, Square, Bath, Waves } from 'lucide-react';
+import { Droplets, Square, Bath, Waves, IndianRupee } from 'lucide-react';
 
 interface AdditionalFixturesStepProps {
   formData: CalculatorFormData;
@@ -90,7 +90,10 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
             <h3 className="font-medium text-lg mb-2">{fixture.name}</h3>
             <p className="text-muted-foreground text-sm mb-4">{fixture.description}</p>
             
-            {/* Price removed as per requirements */}
+            <div className="flex items-center text-sm font-medium">
+              <IndianRupee className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <span>{fixture.price.toLocaleString('en-IN')}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -104,7 +107,10 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
                   <span>{fixtures[fixture].name}</span>
-                  {/* Price removed as per requirements */}
+                  <span className="flex items-center">
+                    <IndianRupee className="h-3.5 w-3.5 mr-1" />
+                    {fixtures[fixture].price.toLocaleString('en-IN')}
+                  </span>
                 </li>
               ))}
           </ul>
