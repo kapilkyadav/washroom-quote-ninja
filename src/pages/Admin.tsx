@@ -1,6 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Database, Home, Mail, Package, Settings, ShoppingCart, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Header from '@/components/layout/Header';
@@ -17,10 +19,41 @@ import LeadsTab from '@/components/admin/LeadsTab';
 import UsersTab from '@/components/admin/UsersTab';
 import DataImportTab from '@/components/admin/DataImportTab';
 import SettingsTab from '@/components/admin/SettingsTab';
+import { toast } from '@/hooks/use-toast';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Check if the user has admin privileges (can be extended for role-based access)
+    const checkAdminAccess = async () => {
+      if (!user) {
+        toast({
+          title: "Access denied",
+          description: "You need to be logged in to access the admin panel",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+      
+      // Check if user has admin role in metadata
+      const userRole = user.user_metadata?.role;
+      if (userRole !== 'admin' && userRole !== 'manager') {
+        toast({
+          title: "Access denied",
+          description: "You don't have permission to access the admin panel",
+          variant: "destructive",
+        });
+        navigate('/');
+      }
+    };
+    
+    checkAdminAccess();
+  }, [user, navigate]);
   
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -59,6 +92,10 @@ const Admin = () => {
         return <DashboardTab />;
     }
   };
+  
+  if (!user) {
+    return null; // Or a loading state while checking auth
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
