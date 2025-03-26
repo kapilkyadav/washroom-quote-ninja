@@ -27,6 +27,7 @@ const Auth = () => {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("signin");
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   const signInForm = useForm<AuthFormData>({
     defaultValues: {
@@ -41,7 +42,6 @@ const Auth = () => {
       password: '',
       fullName: '',
       username: '',
-      agreeTerms: false,
     },
   });
 
@@ -76,7 +76,7 @@ const Auth = () => {
   };
 
   const handleSignUp = async (data: AuthFormData) => {
-    if (!data.agreeTerms) {
+    if (!termsAgreed) {
       toast({
         title: "Please agree to terms",
         description: "You must agree to the terms and conditions to create an account.",
@@ -239,7 +239,8 @@ const Auth = () => {
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="terms"
-                        {...signUpForm.register('agreeTerms')}
+                        checked={termsAgreed}
+                        onCheckedChange={(checked) => setTermsAgreed(checked === true)}
                       />
                       <Label htmlFor="terms" className="text-sm">
                         I agree to the Terms and Privacy Policy
