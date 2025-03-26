@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/hooks/use-toast';
-import { LogIn, UserPlus, Mail, Lock, UserCheck, AtSign, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, UserCheck, AtSign } from 'lucide-react';
 import Header from '@/components/layout/Header';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface AuthFormData {
   email: string;
@@ -25,8 +24,6 @@ const Auth = () => {
   const { user, isLoading, signIn, signUp, signInWithGoogle } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const [showConfirmationMessage, setShowConfirmationMessage] = useState(false);
-  const [confirmationEmail, setConfirmationEmail] = useState("");
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("signin");
   const [termsAgreed, setTermsAgreed] = useState(false);
@@ -58,22 +55,11 @@ const Auth = () => {
       const { error } = await signIn(data.email, data.password);
       
       if (error) {
-        // Handle specific error cases
-        if (error.message.includes('Email not confirmed')) {
-          toast({
-            title: "Email not confirmed",
-            description: "Please check your inbox and confirm your email before signing in.",
-            variant: "destructive",
-          });
-          setShowConfirmationMessage(true);
-          setConfirmationEmail(data.email);
-        } else {
-          toast({
-            title: "Error signing in",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Error signing in",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
         navigate("/");
       }
@@ -113,12 +99,10 @@ const Auth = () => {
         });
       } else {
         toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation email. Please check your inbox and spam folder.",
+          title: "Account created",
+          description: "You have been automatically signed in.",
         });
-        setShowConfirmationMessage(true);
-        setConfirmationEmail(data.email);
-        setActiveTab("signin");
+        navigate("/");
       }
     } catch (error) {
       toast({
@@ -148,25 +132,6 @@ const Auth = () => {
       <Header />
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          {showConfirmationMessage && (
-            <Alert className="mb-4" variant="default">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Email Confirmation Required</AlertTitle>
-              <AlertDescription>
-                A confirmation email has been sent to <strong>{confirmationEmail}</strong>. 
-                Please check both your inbox and spam folder.
-                <br /><br />
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowConfirmationMessage(false)}
-                >
-                  Dismiss
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
           <Card className="shadow-lg border-gray-200">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
