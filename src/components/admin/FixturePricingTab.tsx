@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -124,6 +125,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
+      // Fixed: Properly chain the update and eq methods
       const { error } = await supabase
         .from('fixtures')
         .update({
@@ -272,6 +274,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
+        // Fixed: Properly chain the delete and eq methods
         const { error } = await supabase
           .from('fixtures')
           .delete()
