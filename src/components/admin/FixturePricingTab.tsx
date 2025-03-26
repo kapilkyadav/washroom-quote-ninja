@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -124,15 +125,16 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      const query = supabase
+      // Correct method: First build the query, THEN apply filters
+      const { error } = await supabase
         .from('fixtures')
         .update({
           name: editValues.name,
           price: editValues.price,
           description: editValues.description
-        });
-      
-      const { error } = await query.eq('fixture_id', id).eq('type', fixtureType);
+        })
+        .eq('fixture_id', id)
+        .eq('type', fixtureType);
       
       if (error) throw error;
 
@@ -272,11 +274,12 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        const query = supabase
+        // Correct method: First build the query, THEN apply filters
+        const { error } = await supabase
           .from('fixtures')
-          .delete();
-        
-        const { error } = await query.eq('fixture_id', id).eq('type', fixtureType);
+          .delete()
+          .eq('fixture_id', id)
+          .eq('type', fixtureType);
         
         if (error) throw error;
 
@@ -672,4 +675,3 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
 };
 
 export default FixturePricingTab;
-
