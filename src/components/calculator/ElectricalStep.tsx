@@ -2,29 +2,29 @@
 import { CalculatorFormData, FixturePricing } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, Fan, Flame } from 'lucide-react';
+import { Lightbulb, Wind, FlameKindling, IndianRupee } from 'lucide-react';
 
 interface ElectricalStepProps {
   formData: CalculatorFormData;
   updateFormData: (field: keyof CalculatorFormData, value: any) => void;
 }
 
-// Mock fixture pricing - in a real app this would come from an API or admin settings
+// Updated fixture pricing to match admin panel values - but not displayed to customers
 const fixtures: FixturePricing = {
   ledMirror: {
     name: 'LED Mirror',
-    price: 150,
-    description: 'Energy-efficient LED mirror with anti-fog technology'
+    price: 3500,
+    description: 'Modern LED mirror with touch controls'
   },
   exhaustFan: {
     name: 'Exhaust Fan',
-    price: 120,
-    description: 'Quiet operation with humidity sensor'
+    price: 1800,
+    description: 'High-quality silent exhaust fan'
   },
   waterHeater: {
     name: 'Water Heater',
-    price: 350,
-    description: 'Energy-efficient instant water heating'
+    price: 8000,
+    description: 'Energy-efficient water heater'
   }
 };
 
@@ -43,9 +43,9 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
       case 'ledMirror':
         return <Lightbulb className="w-6 h-6 text-primary" />;
       case 'exhaustFan':
-        return <Fan className="w-6 h-6 text-primary" />;
+        return <Wind className="w-6 h-6 text-primary" />;
       case 'waterHeater':
-        return <Flame className="w-6 h-6 text-primary" />;
+        return <FlameKindling className="w-6 h-6 text-primary" />;
       default:
         return null;
     }
@@ -53,9 +53,9 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
   
   return (
     <div className="space-y-6 py-4 animate-slide-in">
-      <h2 className="heading-2 text-center mb-8">Select Electrical Fixtures</h2>
+      <h2 className="heading-2 text-center mb-8">Electrical Fixtures</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
         {Object.entries(fixtures).map(([id, fixture]) => (
           <div 
             key={id}
@@ -83,7 +83,11 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
             <h3 className="font-medium text-lg mb-2">{fixture.name}</h3>
             <p className="text-muted-foreground text-sm mb-4">{fixture.description}</p>
             
-            {/* Price removed as per requirements */}
+            {/* Don't show actual backend pricing to customers */}
+            {/* <div className="flex items-center text-sm font-medium">
+              <IndianRupee className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <span>{fixture.price.toLocaleString('en-IN')}</span>
+            </div> */}
           </div>
         ))}
       </div>
@@ -97,7 +101,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
                   <span>{fixtures[fixture].name}</span>
-                  {/* Price removed as per requirements */}
+                  {/* Don't show prices to customers */}
                 </li>
               ))}
           </ul>

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { CalculatorFormData, Brand, FixturePricing, EstimateBreakdown, CalcSubmission } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -10,18 +9,18 @@ interface EstimateResultStepProps {
   onReset: () => void;
 }
 
-// Mock pricing data - in a real app this would come from an API
+// Updated pricing data to match admin panel values
 const electricalFixturePricing: FixturePricing = {
-  ledMirror: { name: 'LED Mirror', price: 150 },
-  exhaustFan: { name: 'Exhaust Fan', price: 120 },
-  waterHeater: { name: 'Water Heater', price: 350 }
+  ledMirror: { name: 'LED Mirror', price: 3500 },
+  exhaustFan: { name: 'Exhaust Fan', price: 1800 },
+  waterHeater: { name: 'Water Heater', price: 8000 }
 };
 
 const additionalFixturePricing: FixturePricing = {
-  showerPartition: { name: 'Shower Partition', price: 450 },
-  vanity: { name: 'Vanity', price: 380 },
-  bathtub: { name: 'Bathtub', price: 650 },
-  jacuzzi: { name: 'Jacuzzi', price: 1200 }
+  showerPartition: { name: 'Shower Partition', price: 15000, description: 'Glass shower partition with frame' },
+  vanity: { name: 'Vanity', price: 25000, description: 'Modern bathroom vanity with storage' },
+  bathtub: { name: 'Bathtub', price: 35000, description: 'Premium acrylic bathtub with fixtures' },
+  jacuzzi: { name: 'Jacuzzi', price: 55000, description: 'Premium jacuzzi with massage jets' },
 };
 
 const brands: Brand[] = [

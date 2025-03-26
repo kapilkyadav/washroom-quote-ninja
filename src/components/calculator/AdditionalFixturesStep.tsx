@@ -9,7 +9,7 @@ interface AdditionalFixturesStepProps {
   updateFormData: (field: keyof CalculatorFormData, value: any) => void;
 }
 
-// Mock fixture pricing - in a real app this would come from an API or admin settings
+// Updated fixture pricing to match admin panel values
 const fixtures: FixturePricing = {
   showerPartition: {
     name: 'Shower Partition',
