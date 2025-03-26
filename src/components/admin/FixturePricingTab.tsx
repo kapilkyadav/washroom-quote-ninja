@@ -125,7 +125,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      // Correct method: First build the query, THEN apply filters
+      // First build the query without awaiting
       const { error } = await supabase
         .from('fixtures')
         .update({
@@ -274,7 +274,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        // Correct method: First build the query, THEN apply filters
+        // First build the query without awaiting
         const { error } = await supabase
           .from('fixtures')
           .delete()
