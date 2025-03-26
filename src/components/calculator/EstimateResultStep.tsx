@@ -19,7 +19,7 @@ import {
   CardTitle, 
   CardFooter 
 } from '@/components/ui/card';
-import { CalculatorFormData, Brand, EstimateBreakdown, CalcSubmission } from '@/types';
+import { CalculatorFormData, Brand, EstimateBreakdown, CalcSubmission, DbSubmission, Json } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 interface EstimateResultStepProps {
@@ -76,18 +76,23 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
       // Fetch calculator settings
       const { data: settingsData, error: settingsError } = await supabase
         .from('settings')
-        .select('*')
+        .select()
         .eq('category', 'calculator')
         .single();
       
       if (!settingsError && settingsData) {
-        setCalculatorSettings(settingsData.settings);
+        const settings = settingsData.settings as any;
+        setCalculatorSettings({
+          plumbingRatePerSqFt: settings.plumbingRatePerSqFt || 50,
+          tileCostPerUnit: settings.tileCostPerUnit || 80,
+          tilingLaborRate: settings.tilingLaborRate || 85,
+        });
       }
 
       // Fetch electrical fixtures
       const { data: electricalData, error: electricalError } = await supabase
         .from('fixtures')
-        .select('*')
+        .select()
         .eq('type', 'electrical');
       
       if (!electricalError && electricalData) {
@@ -101,7 +106,7 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
       // Fetch bathroom fixtures
       const { data: bathroomData, error: bathroomError } = await supabase
         .from('fixtures')
-        .select('*')
+        .select()
         .eq('type', 'bathroom');
       
       if (!bathroomError && bathroomData) {
@@ -201,13 +206,13 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
     setIsSubmitting(true);
     
     try {
-      const submission: Omit<CalcSubmission, 'id'> = {
-        customerDetails: formData.customerDetails,
-        estimateAmount: estimate.total,
-        formData,
-        breakdown: estimate,
+      const submission: DbSubmission = {
+        customer_details: formData.customerDetails as unknown as Json,
+        estimate_amount: estimate.total,
+        form_data: formData as unknown as Json,
+        breakdown: estimate as unknown as Json,
         status: 'new',
-        submittedAt: new Date().toISOString()
+        submitted_at: new Date().toISOString()
       };
       
       const { error } = await supabase

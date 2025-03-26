@@ -34,6 +34,7 @@ declare module '@supabase/supabase-js' {
   export interface ApiError {
     message: string;
     status: number;
+    code?: string;
   }
 
   export interface AdminUserManagement {
@@ -60,8 +61,14 @@ declare module '@supabase/supabase-js' {
     from<TableName extends keyof Database['public']['Tables']>(
       table: TableName
     ): {
-      select: (columns?: string) => {
-        eq: (column: string, value: any) => {
+      select: (columns?: string) => Promise<{
+        data: Database['public']['Tables'][TableName]['Row'][] | null;
+        error: ApiError | null;
+      }> & {
+        eq: (column: string, value: any) => Promise<{
+          data: Database['public']['Tables'][TableName]['Row'][] | null;
+          error: ApiError | null;
+        }> & {
           single: () => Promise<{
             data: Database['public']['Tables'][TableName]['Row'] | null;
             error: ApiError | null;
@@ -115,10 +122,6 @@ declare module '@supabase/supabase-js' {
           error: ApiError | null;
         }>;
       };
-      select: (columns?: string) => Promise<{
-        data: Database['public']['Tables'][TableName]['Row'][] | null;
-        error: ApiError | null;
-      }>;
     };
     auth: {
       signUp: (options: {

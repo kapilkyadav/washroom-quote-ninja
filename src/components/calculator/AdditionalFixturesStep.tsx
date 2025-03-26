@@ -44,7 +44,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
     try {
       const { data, error } = await supabase
         .from('fixtures')
-        .select('*')
+        .select()
         .eq('type', 'bathroom');
 
       if (error) throw error;
@@ -55,7 +55,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
           fixturesObj[item.fixture_id] = {
             name: item.name,
             price: item.price,
-            description: item.description
+            description: item.description || undefined
           };
         });
         setFixtures(fixturesObj);

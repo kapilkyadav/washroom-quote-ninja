@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalculatorSettings } from '@/types';
+import { CalculatorSettings, Json } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 const SettingsTab = () => {
@@ -56,42 +56,43 @@ const SettingsTab = () => {
       // Fetch calculator settings
       const { data: calcData, error: calcError } = await supabase
         .from('settings')
-        .select('*')
+        .select()
         .eq('category', 'calculator')
         .single();
 
-      if (calcError && calcError.code !== 'PGRST116') {
+      if (calcError && calcError.message !== 'No rows found') {
         throw calcError;
       }
 
       // If data exists, update state
       if (calcData) {
+        const settingsData = calcData.settings as any;
         setCalculatorSettings({
-          plumbingRatePerSqFt: calcData.settings.plumbingRatePerSqFt || 50,
-          tileCostPerUnit: calcData.settings.tileCostPerUnit || 80,
-          tilingLaborRate: calcData.settings.tilingLaborRate || 85,
+          plumbingRatePerSqFt: settingsData.plumbingRatePerSqFt || 50,
+          tileCostPerUnit: settingsData.tileCostPerUnit || 80,
+          tilingLaborRate: settingsData.tilingLaborRate || 85,
         });
       }
 
       // Similar for general and email settings
       const { data: generalData, error: generalError } = await supabase
         .from('settings')
-        .select('*')
+        .select()
         .eq('category', 'general')
         .single();
 
       if (!generalError && generalData) {
-        setGeneralSettings(generalData.settings);
+        setGeneralSettings(generalData.settings as any);
       }
 
       const { data: emailData, error: emailError } = await supabase
         .from('settings')
-        .select('*')
+        .select()
         .eq('category', 'email')
         .single();
 
       if (!emailError && emailData) {
-        setEmailSettings(emailData.settings);
+        setEmailSettings(emailData.settings as any);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -111,7 +112,7 @@ const SettingsTab = () => {
         .from('settings')
         .upsert({
           category: 'general',
-          settings: generalSettings
+          settings: generalSettings as unknown as Json
         }, {
           onConflict: 'category'
         });
@@ -138,7 +139,7 @@ const SettingsTab = () => {
         .from('settings')
         .upsert({
           category: 'email',
-          settings: emailSettings
+          settings: emailSettings as unknown as Json
         }, {
           onConflict: 'category'
         });
@@ -165,7 +166,7 @@ const SettingsTab = () => {
         .from('settings')
         .upsert({
           category: 'calculator',
-          settings: calculatorSettings
+          settings: calculatorSettings as unknown as Json
         }, {
           onConflict: 'category'
         });

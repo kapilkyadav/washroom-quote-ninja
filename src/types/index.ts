@@ -1,3 +1,6 @@
+
+import type { Json } from './database.types';
+
 export interface CalculatorFormData {
   projectType: 'new' | 'renovation' | '';
   dimensions: {
@@ -88,6 +91,18 @@ export interface CalcSubmission {
   breakdown: EstimateBreakdown;
   status: 'new' | 'contacted' | 'qualified' | 'not-interested';
   submittedAt: string;
+}
+
+export interface DbSubmission {
+  id?: number;
+  customer_details: Json;
+  estimate_amount: number;
+  form_data: Json;
+  breakdown: Json;
+  status?: string;
+  submitted_at: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface Product {

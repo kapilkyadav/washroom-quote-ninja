@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -41,35 +40,39 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const { data: electricalData, error: electricalError } = await supabase
         .from('fixtures')
-        .select('*')
+        .select()
         .eq('type', 'electrical');
 
       if (electricalError) throw electricalError;
 
       const { data: bathroomData, error: bathroomError } = await supabase
         .from('fixtures')
-        .select('*')
+        .select()
         .eq('type', 'bathroom');
 
       if (bathroomError) throw bathroomError;
 
       const electricalMap: FixturePricing = {};
-      electricalData.forEach(item => {
-        electricalMap[item.fixture_id] = {
-          name: item.name,
-          price: item.price,
-          description: item.description
-        };
-      });
+      if (electricalData) {
+        electricalData.forEach(item => {
+          electricalMap[item.fixture_id] = {
+            name: item.name,
+            price: item.price,
+            description: item.description || undefined
+          };
+        });
+      }
 
       const bathroomMap: FixturePricing = {};
-      bathroomData.forEach(item => {
-        bathroomMap[item.fixture_id] = {
-          name: item.name,
-          price: item.price,
-          description: item.description
-        };
-      });
+      if (bathroomData) {
+        bathroomData.forEach(item => {
+          bathroomMap[item.fixture_id] = {
+            name: item.name,
+            price: item.price,
+            description: item.description || undefined
+          };
+        });
+      }
 
       setElectricalFixtures(electricalMap);
       setBathroomFixtures(bathroomMap);
