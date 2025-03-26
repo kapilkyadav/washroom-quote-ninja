@@ -1,3 +1,4 @@
+
 // This file provides type declarations for the Supabase client
 
 declare module '@supabase/supabase-js' {
@@ -55,7 +56,70 @@ declare module '@supabase/supabase-js' {
     ) => Promise<{ data: { user: User | null }; error: ApiError | null }>;
   }
 
-  export interface SupabaseClient {
+  export interface SupabaseClient<Database = any> {
+    from<TableName extends keyof Database['public']['Tables']>(
+      table: TableName
+    ): {
+      select: (columns?: string) => {
+        eq: (column: string, value: any) => {
+          single: () => Promise<{
+            data: Database['public']['Tables'][TableName]['Row'] | null;
+            error: ApiError | null;
+          }>;
+          maybeSingle: () => Promise<{
+            data: Database['public']['Tables'][TableName]['Row'] | null;
+            error: ApiError | null;
+          }>;
+        };
+        order: (column: string, options?: { ascending?: boolean }) => {
+          limit: (count: number) => Promise<{
+            data: Database['public']['Tables'][TableName]['Row'][] | null;
+            error: ApiError | null;
+          }>;
+        };
+      };
+      upsert: (
+        values: Database['public']['Tables'][TableName]['Insert'] | Database['public']['Tables'][TableName]['Insert'][],
+        options?: { onConflict?: string }
+      ) => Promise<{
+        data: Database['public']['Tables'][TableName]['Row'] | null;
+        error: ApiError | null;
+      }>;
+      insert: (
+        values: Database['public']['Tables'][TableName]['Insert'] | Database['public']['Tables'][TableName]['Insert'][],
+        options?: { returning?: string }
+      ) => Promise<{
+        data: Database['public']['Tables'][TableName]['Row'] | null;
+        error: ApiError | null;
+      }>;
+      update: (
+        values: Database['public']['Tables'][TableName]['Update'],
+        options?: { returning?: string }
+      ) => {
+        eq: (column: string, value: any) => Promise<{
+          data: Database['public']['Tables'][TableName]['Row'] | null;
+          error: ApiError | null;
+        }>;
+        match: (query: Record<string, any>) => Promise<{
+          data: Database['public']['Tables'][TableName]['Row'] | null;
+          error: ApiError | null;
+        }>;
+      };
+      delete: () => {
+        eq: (column: string, value: any) => Promise<{
+          data: any;
+          error: ApiError | null;
+        }>;
+        match: (query: Record<string, any>) => Promise<{
+          data: any;
+          error: ApiError | null;
+        }>;
+      };
+      select: (columns?: string) => Promise<{
+        data: Database['public']['Tables'][TableName]['Row'][] | null;
+        error: ApiError | null;
+      }>;
+    };
     auth: {
       signUp: (options: {
         email: string;
@@ -102,12 +166,11 @@ declare module '@supabase/supabase-js' {
       ) => {
         data: { subscription: { unsubscribe: () => void } };
       };
-      // Add the admin property
       admin: AdminUserManagement;
     };
   }
 
-  export function createClient(
+  export function createClient<Database = any>(
     supabaseUrl: string,
     supabaseKey: string,
     options?: {
@@ -117,5 +180,5 @@ declare module '@supabase/supabase-js' {
         autoRefreshToken?: boolean;
       };
     }
-  ): SupabaseClient;
+  ): SupabaseClient<Database>;
 }
