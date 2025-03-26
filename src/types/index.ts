@@ -1,4 +1,3 @@
-
 export interface CalculatorFormData {
   projectType: 'new' | 'renovation' | '';
   dimensions: {
@@ -118,3 +117,6 @@ export interface CalculatorSettings {
   tileCostPerUnit: number;
   tilingLaborRate: number;
 }
+
+// Export the Database types
+export type { Database, Json } from './database.types';
