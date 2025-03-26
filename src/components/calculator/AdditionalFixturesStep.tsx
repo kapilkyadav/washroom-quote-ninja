@@ -42,8 +42,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
 
   const fetchBathroomFixtures = async () => {
     try {
-      const { data, error } = await supabase
-        .from('fixtures')
+      const { data, error } = await supabase.rpc('fixtures')
         .select('*')
         .eq('type', 'bathroom');
 

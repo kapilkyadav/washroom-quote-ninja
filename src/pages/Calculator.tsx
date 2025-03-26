@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalculatorFormData } from '@/types';
@@ -183,7 +182,7 @@ const Calculator = () => {
       case 8:
         return <CustomerDetailsStep formData={formData} updateFormData={updateFormData} />;
       case 9:
-        return <EstimateResultStep formData={formData} onReset={handleReset} />;
+        return <EstimateResultStep formData={formData} onSubmitAnother={handleReset} />;
       default:
         return null;
     }

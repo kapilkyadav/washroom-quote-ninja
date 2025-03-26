@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Copy, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,8 +73,7 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
   const fetchData = async () => {
     try {
       // Fetch calculator settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('settings')
+      const { data: settingsData, error: settingsError } = await supabase.rpc('settings')
         .select('*')
         .eq('category', 'calculator')
         .single();
@@ -85,8 +83,7 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
       }
 
       // Fetch electrical fixtures
-      const { data: electricalData, error: electricalError } = await supabase
-        .from('fixtures')
+      const { data: electricalData, error: electricalError } = await supabase.rpc('fixtures')
         .select('*')
         .eq('type', 'electrical');
       
@@ -99,8 +96,7 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
       }
 
       // Fetch bathroom fixtures
-      const { data: bathroomData, error: bathroomError } = await supabase
-        .from('fixtures')
+      const { data: bathroomData, error: bathroomError } = await supabase.rpc('fixtures')
         .select('*')
         .eq('type', 'bathroom');
       
@@ -210,8 +206,7 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
         submittedAt: new Date().toISOString()
       };
       
-      const { error } = await supabase
-        .from('submissions')
+      const { error } = await supabase.rpc('submissions')
         .insert(submission);
       
       if (error) throw error;

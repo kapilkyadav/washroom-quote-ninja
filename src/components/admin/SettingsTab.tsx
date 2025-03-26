@@ -53,8 +53,7 @@ const SettingsTab = () => {
     setIsLoading(true);
     try {
       // Fetch calculator settings
-      const { data: calcData, error: calcError } = await supabase
-        .from('settings')
+      const { data: calcData, error: calcError } = await supabase.rpc('settings')
         .select('*')
         .eq('category', 'calculator')
         .single();
@@ -73,8 +72,7 @@ const SettingsTab = () => {
       }
 
       // Similar for general and email settings
-      const { data: generalData, error: generalError } = await supabase
-        .from('settings')
+      const { data: generalData, error: generalError } = await supabase.rpc('settings')
         .select('*')
         .eq('category', 'general')
         .single();
@@ -83,8 +81,7 @@ const SettingsTab = () => {
         setGeneralSettings(generalData.settings);
       }
 
-      const { data: emailData, error: emailError } = await supabase
-        .from('settings')
+      const { data: emailData, error: emailError } = await supabase.rpc('settings')
         .select('*')
         .eq('category', 'email')
         .single();
@@ -106,8 +103,7 @@ const SettingsTab = () => {
   
   const saveGeneralSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('settings')
+      const { data, error } = await supabase.rpc('settings')
         .upsert({
           category: 'general',
           settings: generalSettings
@@ -133,8 +129,7 @@ const SettingsTab = () => {
   
   const saveEmailSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('settings')
+      const { data, error } = await supabase.rpc('settings')
         .upsert({
           category: 'email',
           settings: emailSettings
@@ -160,8 +155,7 @@ const SettingsTab = () => {
   
   const saveCalculatorSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('settings')
+      const { data, error } = await supabase.rpc('settings')
         .upsert({
           category: 'calculator',
           settings: calculatorSettings

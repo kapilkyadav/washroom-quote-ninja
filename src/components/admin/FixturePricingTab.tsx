@@ -38,15 +38,13 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
   const fetchFixtures = async () => {
     setIsLoading(true);
     try {
-      const { data: electricalData, error: electricalError } = await supabase
-        .from('fixtures')
+      const { data: electricalData, error: electricalError } = await supabase.rpc('fixtures')
         .select('*')
         .eq('type', 'electrical');
 
       if (electricalError) throw electricalError;
 
-      const { data: bathroomData, error: bathroomError } = await supabase
-        .from('fixtures')
+      const { data: bathroomData, error: bathroomError } = await supabase.rpc('fixtures')
         .select('*')
         .eq('type', 'bathroom');
 
@@ -120,8 +118,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      const { error } = await supabase
-        .from('fixtures')
+      const { error } = await supabase.rpc('fixtures')
         .update({
           name: editValues.name,
           price: editValues.price,
@@ -214,8 +211,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         return;
       }
 
-      const { error } = await supabase
-        .from('fixtures')
+      const { error } = await supabase.rpc('fixtures')
         .insert({
           fixture_id: newFixture.id,
           name: newFixture.name,
@@ -268,8 +264,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        const { error } = await supabase
-          .from('fixtures')
+        const { error } = await supabase.rpc('fixtures')
           .delete()
           .eq('fixture_id', id)
           .eq('type', fixtureType);
