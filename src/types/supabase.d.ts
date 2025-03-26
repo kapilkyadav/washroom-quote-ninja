@@ -1,4 +1,3 @@
-
 // This file provides type declarations for the Supabase client
 
 declare module '@supabase/supabase-js' {
@@ -19,6 +18,7 @@ declare module '@supabase/supabase-js' {
     last_sign_in_at?: string;
     role?: string;
     updated_at?: string;
+    banned?: boolean;
   }
 
   export interface Session {
