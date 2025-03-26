@@ -162,7 +162,6 @@ const Calculator = () => {
     toast.success('Started a new quote calculation');
   };
   
-  // Render the current step
   const renderStep = () => {
     switch (currentStep) {
       case 1:

@@ -37,7 +37,8 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
 
   const fetchElectricalFixtures = async () => {
     try {
-      const { data, error } = await supabase.rpc('fixtures')
+      const { data, error } = await supabase
+        .from('fixtures')
         .select('*')
         .eq('type', 'electrical');
 

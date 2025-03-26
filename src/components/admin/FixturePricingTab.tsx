@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -38,13 +39,15 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
   const fetchFixtures = async () => {
     setIsLoading(true);
     try {
-      const { data: electricalData, error: electricalError } = await supabase.rpc('fixtures')
+      const { data: electricalData, error: electricalError } = await supabase
+        .from('fixtures')
         .select('*')
         .eq('type', 'electrical');
 
       if (electricalError) throw electricalError;
 
-      const { data: bathroomData, error: bathroomError } = await supabase.rpc('fixtures')
+      const { data: bathroomData, error: bathroomError } = await supabase
+        .from('fixtures')
         .select('*')
         .eq('type', 'bathroom');
 
@@ -118,7 +121,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      const { error } = await supabase.rpc('fixtures')
+      const { error } = await supabase
+        .from('fixtures')
         .update({
           name: editValues.name,
           price: editValues.price,
@@ -211,7 +215,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         return;
       }
 
-      const { error } = await supabase.rpc('fixtures')
+      const { error } = await supabase
+        .from('fixtures')
         .insert({
           fixture_id: newFixture.id,
           name: newFixture.name,
@@ -264,7 +269,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        const { error } = await supabase.rpc('fixtures')
+        const { error } = await supabase
+          .from('fixtures')
           .delete()
           .eq('fixture_id', id)
           .eq('type', fixtureType);
