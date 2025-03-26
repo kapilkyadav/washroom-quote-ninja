@@ -125,7 +125,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
-      // First build the query without awaiting
+      // Fixed: Chain .eq() method before awaiting
       const { error } = await supabase
         .from('fixtures')
         .update({
@@ -274,7 +274,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
-        // First build the query without awaiting
+        // Fixed: Chain .eq() method before awaiting
         const { error } = await supabase
           .from('fixtures')
           .delete()
