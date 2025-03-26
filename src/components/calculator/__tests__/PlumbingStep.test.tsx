@@ -1,9 +1,10 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import PlumbingStep from '../PlumbingStep';
+import { CalculatorFormData } from '@/types';
 
 describe('PlumbingStep', () => {
-  const mockFormData = {
+  const mockFormData: CalculatorFormData = {
     projectType: 'new',
     dimensions: {
       length: 10,
@@ -72,7 +73,7 @@ describe('PlumbingStep', () => {
   });
 
   test('displays what\'s included when an option is selected', async () => {
-    const formDataWithSelection = {
+    const formDataWithSelection: CalculatorFormData = {
       ...mockFormData,
       plumbingRequirements: 'complete'
     };

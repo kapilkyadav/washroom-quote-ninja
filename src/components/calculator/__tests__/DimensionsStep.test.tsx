@@ -1,9 +1,10 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import DimensionsStep from '../DimensionsStep';
+import { CalculatorFormData } from '@/types';
 
 describe('DimensionsStep', () => {
-  const mockFormData = {
+  const mockFormData: CalculatorFormData = {
     projectType: 'new',
     dimensions: {
       length: 10,
