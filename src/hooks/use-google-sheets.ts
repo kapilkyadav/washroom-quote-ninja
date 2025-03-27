@@ -1,229 +1,227 @@
 
-import { useState, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ImportConfiguration } from '@/types';
+import { toast } from '@/hooks/use-toast';
+import { ImportConfiguration, ColumnMapping, ProductData } from '@/types';
+
+export type SheetData = {
+  headers: string[];
+  rows: Record<string, string>[];
+};
 
 export type SheetColumn = string;
 
-export interface SheetData {
-  title: string;
-  columns: SheetColumn[];
-  rows: Record<string, string>[];
-}
-
-export interface ColumnMapping {
-  sourceColumn: string;
-  targetField: string;
-  isRequired?: boolean;
-}
-
 export const useGoogleSheets = () => {
-  const [sheetData, setSheetData] = useState<SheetData>({
-    title: '',
-    columns: [],
-    rows: []
+  const [sheetData, setSheetData] = useState<SheetData>({ headers: [], rows: [] });
+  const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
+  const [selectedConfig, setSelectedConfig] = useState<ImportConfiguration | null>(null);
+  
+  // Fetch import configurations
+  const { 
+    data: importConfigs,
+    isLoading: isLoadingConfigs,
+    refetch: refetchConfigs
+  } = useQuery({
+    queryKey: ['importConfigurations'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('import_configurations')
+          .select('*')
+          .order('name');
+        
+        if (error) throw error;
+        return data as ImportConfiguration[];
+      } catch (error) {
+        console.error('Error fetching import configurations:', error);
+        return [] as ImportConfiguration[];
+      }
+    }
   });
   
-  const [savedConfigs, setSavedConfigs] = useState<ImportConfiguration[]>([]);
-  const [isLoadingConfigs, setIsLoadingConfigs] = useState<boolean>(false);
-  
-  // Fetch existing import configurations from Supabase
-  const loadSavedConfigurations = async () => {
-    setIsLoadingConfigs(true);
-    try {
-      const { data, error } = await supabase
-        .from('import_configurations')
-        .select('*')
-        .order('last_used', { ascending: false });
-        
-      if (error) throw error;
-      setSavedConfigs(data as ImportConfiguration[]);
-    } catch (error) {
-      console.error('Error loading import configurations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load saved import configurations.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingConfigs(false);
-    }
-  };
-  
-  useEffect(() => {
-    loadSavedConfigurations();
-  }, []);
-  
-  // Fetch data from Google Sheets
+  // Fetch sheet data from Google Sheet URL
   const fetchSheetData = async (url: string): Promise<SheetData> => {
     try {
-      // Validate the URL
-      if (!url || !url.includes('docs.google.com/spreadsheets')) {
-        throw new Error('Invalid Google Sheets URL');
-      }
-      
       // Extract the sheet ID from the URL
-      const matches = url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-      if (!matches || matches.length < 2) {
-        throw new Error('Could not extract Google Sheet ID from URL');
+      const matches = url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/) ||
+                     url.match(/docs.google.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      
+      if (!matches || !matches[1]) {
+        throw new Error('Invalid Google Sheet URL');
       }
       
       const sheetId = matches[1];
       
-      // Create a public export URL
-      const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+      // Construct the API URL to fetch the sheet data
+      const apiUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
       
-      // Fetch the CSV data
-      const response = await fetch(exportUrl);
+      const response = await fetch(apiUrl);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch sheet data. Make sure the sheet is publicly accessible.');
+        throw new Error('Failed to fetch sheet data');
       }
       
       const text = await response.text();
       
-      // Parse CSV
-      const rows = parseCSV(text);
+      // Extract JSON from the response (it comes wrapped in a callback)
+      const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+      const data = JSON.parse(jsonText);
       
-      if (rows.length === 0) {
-        throw new Error('Sheet appears to be empty');
-      }
+      // Extract headers and rows
+      const headers = data.table.cols.map((col: any) => col.label || '');
       
-      // Extract headers and data
-      const headers = rows[0];
-      const dataRows = rows.slice(1).map(row => {
+      // Extract rows as objects with header keys
+      const rows = data.table.rows.map((row: any) => {
         const rowData: Record<string, string> = {};
-        headers.forEach((header, index) => {
-          rowData[header] = row[index] || '';
+        row.c.forEach((cell: any, index: number) => {
+          const header = headers[index];
+          if (header) {
+            rowData[header] = cell ? (cell.v !== null ? String(cell.v) : '') : '';
+          }
         });
         return rowData;
       });
       
-      // Save the import URL to Supabase
-      await saveImportConfiguration({
-        name: `Import ${new Date().toLocaleString()}`,
+      return { headers, rows };
+    } catch (error) {
+      console.error('Error fetching Google Sheet:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to fetch sheet data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+      return { headers: [], rows: [] };
+    }
+  };
+  
+  // Save import configuration
+  const saveImportConfiguration = useMutation({
+    mutationFn: async ({ name, sourceUrl, mappings }: { name: string; sourceUrl: string; mappings: Record<string, string> }) => {
+      const config = {
+        name,
         source_type: 'google_sheet',
-        source_url: url,
-        column_mappings: {}
-      });
-      
-      return {
-        title: `Google Sheet Import`,
-        columns: headers,
-        rows: dataRows
+        source_url: sourceUrl,
+        column_mappings: mappings,
       };
-    } catch (error) {
-      console.error('Error fetching sheet data:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch sheet data",
-        variant: "destructive"
-      });
-      return {
-        title: '',
-        columns: [],
-        rows: []
-      };
-    }
-  };
-  
-  // Save import configuration to Supabase
-  const saveImportConfiguration = async (config: Omit<ImportConfiguration, 'id' | 'created_at' | 'updated_at' | 'last_used'>) => {
-    try {
-      const { data, error } = await supabase
-        .from('import_configurations')
-        .insert({
-          ...config,
-          last_used: new Date().toISOString()
-        })
-        .select();
+      
+      try {
+        const { data, error } = await supabase
+          .from('import_configurations')
+          .insert({
+            name: config.name,
+            source_type: config.source_type,
+            source_url: config.source_url,
+            column_mappings: config.column_mappings,
+            last_used: new Date().toISOString()
+          })
+          .select('*');
         
-      if (error) throw error;
-      
-      // Refresh the list of configurations
-      loadSavedConfigurations();
-      
-      return data?.[0] as ImportConfiguration;
-    } catch (error) {
-      console.error('Error saving import configuration:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save import configuration.",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
-  
-  // Load a saved configuration
-  const loadConfiguration = async (id: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('import_configurations')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      
-      // Update the last_used timestamp
-      await supabase
-        .from('import_configurations')
-        .update({ last_used: new Date().toISOString() })
-        .eq('id', id);
-      
-      return data as ImportConfiguration;
-    } catch (error) {
-      console.error('Error loading configuration:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load the selected configuration.",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
-  
-  // Helper function to parse CSV
-  const parseCSV = (text: string): string[][] => {
-    const lines = text.split('\n');
-    return lines.map(line => {
-      const row: string[] = [];
-      let inQuotes = false;
-      let currentValue = '';
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        
-        if (char === ',' && !inQuotes) {
-          row.push(currentValue);
-          currentValue = '';
-        } else if (char === '"') {
-          if (inQuotes && i < line.length - 1 && line[i + 1] === '"') {
-            // Double quotes inside a quoted section
-            currentValue += '"';
-            i++;
-          } else {
-            // Starting or ending quotes
-            inQuotes = !inQuotes;
-          }
-        } else {
-          currentValue += char;
-        }
+        if (error) throw error;
+        return data?.[0] as ImportConfiguration;
+      } catch (error) {
+        console.error('Error saving import configuration:', error);
+        throw error;
       }
-      
-      row.push(currentValue); // Add the last value
-      return row;
-    }).filter(row => row.length > 0 && row.some(cell => cell.trim() !== ''));
-  };
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Configuration Saved',
+        description: 'Your import configuration has been saved.',
+      });
+      refetchConfigs();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to save configuration: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Update import configuration
+  const updateImportConfiguration = useMutation({
+    mutationFn: async ({ id, name, sourceUrl, mappings }: { id: number; name: string; sourceUrl: string; mappings: Record<string, string> }) => {
+      try {
+        const { data, error } = await supabase
+          .from('import_configurations')
+          .update({
+            name,
+            source_url: sourceUrl,
+            column_mappings: mappings,
+            last_used: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select('*');
+        
+        if (error) throw error;
+        return data?.[0];
+      } catch (error) {
+        console.error('Error updating import configuration:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Configuration Updated',
+        description: 'Your import configuration has been updated.',
+      });
+      refetchConfigs();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update configuration: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Delete import configuration
+  const deleteImportConfiguration = useMutation({
+    mutationFn: async (id: number) => {
+      try {
+        const { error } = await supabase
+          .from('import_configurations')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        return id;
+      } catch (error) {
+        console.error('Error deleting import configuration:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Configuration Deleted',
+        description: 'Your import configuration has been deleted.',
+      });
+      refetchConfigs();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete configuration: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
   
   return {
     fetchSheetData,
     sheetData,
     setSheetData,
-    savedConfigs,
-    loadConfiguration,
+    columnMappings,
+    setColumnMappings,
+    importConfigs,
+    selectedConfig,
+    setSelectedConfig,
     saveImportConfiguration,
+    updateImportConfiguration,
+    deleteImportConfiguration,
     isLoadingConfigs
   };
 };

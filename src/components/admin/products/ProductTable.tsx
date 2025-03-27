@@ -30,8 +30,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
-import ProductDialog from './ProductDialog';
-import ImportDialog from './ImportDialog';
+import { ProductDialog } from './ProductDialog';
+import { ImportDialog } from './ImportDialog';
 
 interface ProductTableProps {
   searchQuery: string;
@@ -173,28 +173,36 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-              />
+                disabled={currentPage === 1}
+              >
+                <PaginationPrevious />
+              </Button>
             </PaginationItem>
             
             {[...Array(totalPages)].map((_, i) => (
               <PaginationItem key={i}>
-                <PaginationLink
-                  isActive={currentPage === i + 1}
+                <Button
+                  variant={currentPage === i + 1 ? "default" : "outline"}
                   onClick={() => setCurrentPage(i + 1)}
                 >
                   {i + 1}
-                </PaginationLink>
+                </Button>
               </PaginationItem>
             ))}
             
             <PaginationItem>
-              <PaginationNext 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-              />
+                disabled={currentPage === totalPages}
+              >
+                <PaginationNext />
+              </Button>
             </PaginationItem>
           </PaginationContent>
         </Pagination>

@@ -124,19 +124,21 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
   const getFilteredFixtures = (type: string) => {
     const fixturesOfType = fixturesByType[type] || [];
     
-    return fixturesOfType
+    const filteredFixtures = fixturesOfType
       .filter(fixture => 
         fixture.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .map(fixture => [
-        fixture.fixture_id,
-        {
-          name: fixture.name,
-          price: fixture.price,
-          description: fixture.description || undefined
-        }
-      ]);
+      );
+      
+    // Convert to the expected format for FixtureTypeTab
+    return filteredFixtures.map(fixture => [
+      fixture.fixture_id,
+      {
+        name: fixture.name,
+        price: fixture.price,
+        description: fixture.description || undefined
+      }
+    ]) as [string, { name: string; price: number; description?: string }][];
   };
 
   const filteredElectricalFixtures = getFilteredFixtures('electrical');

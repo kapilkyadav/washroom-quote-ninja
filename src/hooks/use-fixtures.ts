@@ -68,7 +68,7 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
         query = query.ilike('name', `%${search}%`);
       }
       
-      const { data, error } = await query;
+      const { data, error } = await query.order('name');
       
       if (error) throw error;
       return data as Fixture[];
@@ -123,7 +123,7 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
             .from('fixtures')
             .update({ price, updated_at: new Date().toISOString() })
             .eq('id', id)
-            .select();
+            .select('*');
           
           if (error) throw error;
           return data?.[0];

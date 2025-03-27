@@ -17,16 +17,15 @@ export const useBrands = (searchQuery = '') => {
   } = useQuery({
     queryKey: ['brands', searchQuery],
     queryFn: async () => {
-      let query = supabase
-        .from('brands')
-        .select('*')
-        .order('name');
+      let query = supabase.from('brands');
       
       if (searchQuery) {
         query = query.ilike('name', `%${searchQuery}%`);
       }
       
-      const { data, error } = await query;
+      const { data, error } = await query
+        .select('*')
+        .order('name');
       
       if (error) throw error;
       return data as BrandData[];
@@ -39,7 +38,7 @@ export const useBrands = (searchQuery = '') => {
       const { data, error } = await supabase
         .from('brands')
         .insert(brand)
-        .select();
+        .select('*');
       
       if (error) throw error;
       return data?.[0] as BrandData;
@@ -70,7 +69,7 @@ export const useBrands = (searchQuery = '') => {
         .from('brands')
         .update(updates)
         .eq('id', id)
-        .select();
+        .select('*');
       
       if (error) throw error;
       return data?.[0] as BrandData;
