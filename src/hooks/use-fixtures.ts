@@ -108,7 +108,8 @@ export const useFixtures = () => {
             fixture.price !== originalFixture.price ||
             fixture.description !== originalFixture.description) {
           
-          const promise = supabase
+          // Build the complete query chain before pushing to promises
+          const updatePromise = supabase
             .from('fixtures')
             .update({
               name: fixture.name,
@@ -118,7 +119,7 @@ export const useFixtures = () => {
             .eq('fixture_id', id)
             .eq('type', 'electrical');
             
-          allPromises.push(promise);
+          allPromises.push(updatePromise);
         }
       }
       
@@ -131,7 +132,8 @@ export const useFixtures = () => {
             fixture.price !== originalFixture.price ||
             fixture.description !== originalFixture.description) {
           
-          const promise = supabase
+          // Build the complete query chain before pushing to promises
+          const updatePromise = supabase
             .from('fixtures')
             .update({
               name: fixture.name,
@@ -141,7 +143,7 @@ export const useFixtures = () => {
             .eq('fixture_id', id)
             .eq('type', 'bathroom');
             
-          allPromises.push(promise);
+          allPromises.push(updatePromise);
         }
       }
       

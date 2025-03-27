@@ -43,6 +43,7 @@ export const useFixtureEditing = ({
     try {
       const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
       
+      // Build the complete query chain before awaiting
       const { error } = await supabase
         .from('fixtures')
         .update({
@@ -99,6 +100,7 @@ export const useFixtureEditing = ({
       try {
         const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
         
+        // Build the complete query chain before awaiting
         const { error } = await supabase
           .from('fixtures')
           .delete()

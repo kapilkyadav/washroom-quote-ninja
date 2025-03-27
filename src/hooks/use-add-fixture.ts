@@ -56,6 +56,7 @@ export const useAddFixture = ({
         return;
       }
 
+      // Build the complete query chain before awaiting
       const { error } = await supabase
         .from('fixtures')
         .insert({
