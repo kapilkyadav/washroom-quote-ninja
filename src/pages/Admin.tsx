@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ChevronDown, Database, Home, Mail, Package, Settings, ShoppingCart, Users, DollarSign, FileSpreadsheet } from 'lucide-react';
+import { ChevronDown, Home, Mail, Settings, Users, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Header from '@/components/layout/Header';
@@ -12,14 +12,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import DashboardTab from '@/components/admin/DashboardTab';
 import ProjectsTab from '@/components/admin/ProjectsTab';
-import BrandsTab from '@/components/admin/BrandsTab';
 import LeadsTab from '@/components/admin/LeadsTab';
 import UsersTab from '@/components/admin/UsersTab';
-import DataImportTab from '@/components/admin/DataImportTab';
 import SettingsTab from '@/components/admin/SettingsTab';
-import FixturePricingTab from '@/components/admin/FixturePricingTab';
 import SubmissionsTab from '@/components/admin/SubmissionsTab';
-import BrandsProductsTab from '@/components/admin/BrandsProductsTab';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -30,21 +26,17 @@ const Admin = () => {
     setSearchQuery('');
   };
 
-  // Tab options for the sidebar
+  // Tab options for the sidebar - removed brands, products, fixtures and data import
   const tabOptions = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'submissions', label: 'Quote Submissions', icon: FileSpreadsheet },
-    { id: 'projects', label: 'Projects', icon: Package },
-    { id: 'brands-products', label: 'Brands & Products', icon: ShoppingCart },
-    { id: 'brands', label: 'Legacy Brands', icon: ShoppingCart },
-    { id: 'fixtures', label: 'Fixture Pricing', icon: DollarSign },
+    { id: 'projects', label: 'Projects', icon: Home },
     { id: 'leads', label: 'Leads', icon: Mail },
     { id: 'users', label: 'Users', icon: Users },
-    { id: 'data', label: 'Data Import', icon: Database },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
   
-  // Render the active tab content
+  // Render the active tab content - removed brands, products, fixtures and data import tabs
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -53,18 +45,10 @@ const Admin = () => {
         return <SubmissionsTab searchQuery={searchQuery} />;
       case 'projects':
         return <ProjectsTab searchQuery={searchQuery} />;
-      case 'brands-products':
-        return <BrandsProductsTab searchQuery={searchQuery} />;
-      case 'brands':
-        return <BrandsTab searchQuery={searchQuery} />;
-      case 'fixtures':
-        return <FixturePricingTab searchQuery={searchQuery} />;
       case 'leads':
         return <LeadsTab searchQuery={searchQuery} />;
       case 'users':
         return <UsersTab searchQuery={searchQuery} />;
-      case 'data':
-        return <DataImportTab />;
       case 'settings':
         return <SettingsTab />;
       default:
@@ -135,7 +119,7 @@ const Admin = () => {
               {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
             </h1>
             
-            {['brands', 'brands-products', 'projects', 'fixtures', 'leads', 'users', 'submissions'].includes(activeTab) && (
+            {['projects', 'leads', 'users', 'submissions'].includes(activeTab) && (
               <div className="flex items-center gap-3">
                 <Input 
                   placeholder="Search..." 
