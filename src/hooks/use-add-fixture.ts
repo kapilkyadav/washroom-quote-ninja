@@ -5,12 +5,16 @@ import { FixturePricing } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 interface UseAddFixtureProps {
+  electricalFixtures: FixturePricing;
+  bathroomFixtures: FixturePricing;
   setElectricalFixtures: React.Dispatch<React.SetStateAction<FixturePricing>>;
   setBathroomFixtures: React.Dispatch<React.SetStateAction<FixturePricing>>;
   activeTab: string;
 }
 
 export const useAddFixture = ({ 
+  electricalFixtures,
+  bathroomFixtures,
   setElectricalFixtures, 
   setBathroomFixtures,
   activeTab

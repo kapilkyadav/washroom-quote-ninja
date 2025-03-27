@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFixtures } from '@/hooks/use-fixtures';
@@ -18,7 +18,9 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     bathroomFixtures, 
     setElectricalFixtures, 
     setBathroomFixtures, 
-    isLoading 
+    isLoading,
+    hasUnsavedChanges,
+    saveAllChanges
   } = useFixtures();
 
   const {
@@ -32,6 +34,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     handleCancelEdit,
     handleDeleteFixture
   } = useFixtureEditing({ 
+    electricalFixtures,
+    bathroomFixtures,
     setElectricalFixtures, 
     setBathroomFixtures 
   });
@@ -43,6 +47,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     handleNewFixtureChange,
     handleAddFixture
   } = useAddFixture({
+    electricalFixtures,
+    bathroomFixtures,
     setElectricalFixtures,
     setBathroomFixtures,
     activeTab
@@ -66,13 +72,26 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
           <p className="text-sm text-muted-foreground">Configure pricing for electrical and bathroom fixtures</p>
         </div>
         
-        <Button 
-          className="flex items-center gap-2"
-          onClick={() => setIsAddingNew(true)}
-        >
-          <Plus size={16} />
-          Add Fixture
-        </Button>
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && (
+            <Button 
+              variant="default"
+              className="flex items-center gap-2"
+              onClick={saveAllChanges}
+            >
+              <Save size={16} />
+              Save All Changes
+            </Button>
+          )}
+          
+          <Button 
+            className="flex items-center gap-2"
+            onClick={() => setIsAddingNew(true)}
+          >
+            <Plus size={16} />
+            Add Fixture
+          </Button>
+        </div>
       </div>
       
       {isLoading ? (
