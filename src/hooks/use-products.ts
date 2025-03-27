@@ -43,7 +43,7 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
       const { data, error } = await supabase
         .from('products')
         .insert(product)
-        .select()
+        .select('*')
         .single();
       
       if (error) throw error;
@@ -75,7 +75,7 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
         .from('products')
         .update(updates)
         .eq('id', id)
-        .select()
+        .select('*')
         .single();
       
       if (error) throw error;
@@ -132,7 +132,7 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
       const { data, error } = await supabase
         .from('products')
         .insert(products)
-        .select();
+        .select('*');
       
       if (error) throw error;
       return data as ProductData[];

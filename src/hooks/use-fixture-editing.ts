@@ -1,147 +1,110 @@
 
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { FixturePricing } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { FixturePricing } from '@/types';
 
-interface UseFixtureEditingProps {
-  electricalFixtures: FixturePricing;
-  bathroomFixtures: FixturePricing;
-  setElectricalFixtures: React.Dispatch<React.SetStateAction<FixturePricing>>;
-  setBathroomFixtures: React.Dispatch<React.SetStateAction<FixturePricing>>;
+// Interface for form data
+interface FixtureFormData {
+  name: string;
+  fixture_id: string;
+  type: string;
+  description?: string;
+  price: number;
 }
 
-export const useFixtureEditing = ({ 
-  electricalFixtures,
-  bathroomFixtures,
-  setElectricalFixtures, 
-  setBathroomFixtures 
-}: UseFixtureEditingProps) => {
-  const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState({ name: '', price: 0, description: '' });
-  const [activeTab, setActiveTab] = useState('electrical');
+export function useFixtureEditing() {
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
-  const handleEditStart = (id: string, fixture: { name: string, price: number, description?: string }) => {
-    setIsEditing(id);
-    setEditValues({
-      name: fixture.name,
-      price: fixture.price,
-      description: fixture.description || '',
-    });
-  };
-
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    setEditValues(prev => ({
-      ...prev,
-      [name]: name === 'price' ? parseFloat(value) || 0 : value,
-    }));
-  };
-
-  const handleSaveEdit = async (id: string) => {
-    try {
-      const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
+  // Create new fixture
+  const createFixture = useMutation({
+    mutationFn: async (formData: FixtureFormData) => {
+      setIsSubmitting(true);
       
-      // Build the complete query chain before awaiting
-      const { error } = await supabase
-        .from('fixtures')
-        .update({
-          name: editValues.name,
-          price: editValues.price,
-          description: editValues.description
-        })
-        .eq('fixture_id', id)
-        .eq('type', fixtureType);
-      
-      if (error) throw error;
+      try {
+        const { data, error } = await supabase
+          .from('fixtures')
+          .insert({
+            name: formData.name,
+            fixture_id: formData.fixture_id,
+            type: formData.type,
+            description: formData.description || null,
+            price: formData.price
+          })
+          .select('*')
+          .single();
 
-      if (activeTab === 'electrical') {
-        setElectricalFixtures(prev => ({
-          ...prev,
-          [id]: {
-            name: editValues.name,
-            price: editValues.price,
-            description: editValues.description,
-          },
-        }));
-      } else {
-        setBathroomFixtures(prev => ({
-          ...prev,
-          [id]: {
-            name: editValues.name,
-            price: editValues.price,
-            description: editValues.description,
-          },
-        }));
+        if (error) throw error;
+        return data;
+      } finally {
+        setIsSubmitting(false);
       }
-
-      setIsEditing(null);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fixtures'] });
       toast({
-        title: "Fixture Updated",
-        description: `${editValues.name} has been updated successfully.`,
+        title: "Success",
+        description: "Fixture has been created successfully."
       });
-    } catch (error) {
+    },
+    onError: (error) => {
+      console.error('Error creating fixture:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create fixture. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update existing fixture
+  const updateFixture = useMutation({
+    mutationFn: async ({ id, formData }: { id: number; formData: FixtureFormData }) => {
+      setIsSubmitting(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('fixtures')
+          .update({
+            name: formData.name,
+            fixture_id: formData.fixture_id,
+            type: formData.type,
+            description: formData.description || null,
+            price: formData.price,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        return data;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fixtures'] });
+      toast({
+        title: "Success",
+        description: "Fixture has been updated successfully."
+      });
+    },
+    onError: (error) => {
       console.error('Error updating fixture:', error);
       toast({
         title: "Error",
-        description: "Failed to update fixture.",
-        variant: "destructive",
+        description: "Failed to update fixture. Please try again.",
+        variant: "destructive"
       });
     }
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(null);
-  };
-
-  const handleDeleteFixture = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        const fixtureType = activeTab === 'electrical' ? 'electrical' : 'bathroom';
-        
-        // Build the complete query chain before awaiting
-        const { error } = await supabase
-          .from('fixtures')
-          .delete()
-          .eq('fixture_id', id)
-          .eq('type', fixtureType);
-        
-        if (error) throw error;
-
-        if (activeTab === 'electrical') {
-          const { [id]: _, ...restFixtures } = electricalFixtures;
-          setElectricalFixtures(restFixtures as FixturePricing);
-        } else {
-          const { [id]: _, ...restFixtures } = bathroomFixtures;
-          setBathroomFixtures(restFixtures as FixturePricing);
-        }
-        
-        toast({
-          title: "Fixture Deleted",
-          description: `${name} has been deleted successfully.`,
-          variant: "destructive",
-        });
-      } catch (error) {
-        console.error('Error deleting fixture:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete fixture.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
+  });
 
   return {
-    isEditing,
-    editValues,
-    activeTab,
-    setActiveTab,
-    handleEditStart,
-    handleEditChange,
-    handleSaveEdit,
-    handleCancelEdit,
-    handleDeleteFixture
+    createFixture,
+    updateFixture,
+    isSubmitting
   };
-};
+}

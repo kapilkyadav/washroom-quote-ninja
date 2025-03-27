@@ -39,7 +39,7 @@ export const useBrands = (searchQuery = '') => {
       const { data, error } = await supabase
         .from('brands')
         .insert(brand)
-        .select()
+        .select('*')
         .single();
       
       if (error) throw error;
@@ -71,7 +71,7 @@ export const useBrands = (searchQuery = '') => {
         .from('brands')
         .update(updates)
         .eq('id', id)
-        .select()
+        .select('*')
         .single();
       
       if (error) throw error;

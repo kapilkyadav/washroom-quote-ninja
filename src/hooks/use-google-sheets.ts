@@ -1,150 +1,157 @@
 
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { ImportConfiguration, ColumnMapping } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { ColumnMapping, ImportConfiguration, ProductData } from '@/types';
 
-interface SheetData {
-  headers: string[];
-  rows: Record<string, any>[];
+// API key for accessing Google Sheets (this would need to be environment variable in production)
+// const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+
+export interface SheetColumn {
+  header: string;
+  index: number;
+}
+
+export interface SheetData {
+  headers: SheetColumn[];
+  rows: string[][];
 }
 
 export const useGoogleSheets = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
+  const [isLoadingSheet, setIsLoadingSheet] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
   
-  // Function to extract the sheet ID from a Google Sheets URL
-  const extractSheetId = (url: string): string | null => {
-    const matches = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    return matches ? matches[1] : null;
-  };
-
-  // Fetch sheet data
-  const fetchSheetData = async (url: string) => {
-    setIsLoading(true);
-    
+  // Get sheet ID from URL
+  const getSheetIdFromUrl = (url: string): string | null => {
     try {
-      const sheetId = extractSheetId(url);
-      
-      if (!sheetId) {
-        throw new Error("Invalid Google Sheets URL");
-      }
-      
-      // Using the Google Sheets API to fetch the sheet data
-      // Note: In a real-world scenario, you might need to use a proxy or server-side function
-      // due to CORS restrictions
-      const response = await fetch(
-        `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
-      );
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch sheet data");
-      }
-      
-      const text = await response.text();
-      // Google Sheets API returns a callback wrapper. We need to extract the JSON.
-      const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-      const data = JSON.parse(jsonText);
-      
-      if (!data.table || !data.table.cols || !data.table.rows) {
-        throw new Error("Invalid sheet data format");
-      }
-      
-      // Extract headers and rows
-      const headers = data.table.cols.map((col: any) => col.label);
-      
-      const rows = data.table.rows.map((row: any) => {
-        const rowData: Record<string, any> = {};
-        
-        row.c.forEach((cell: any, index: number) => {
-          rowData[headers[index]] = cell ? cell.v : null;
-        });
-        
-        return rowData;
-      });
-      
-      setSheetData({ headers, rows });
-      
-      toast({
-        title: "Sheet Data Fetched",
-        description: `Found ${rows.length} rows with ${headers.length} columns.`
-      });
-      
-      return { headers, rows };
+      // Extract sheet ID from various Google Sheets URL formats
+      const regex = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
     } catch (error) {
-      console.error('Error fetching sheet data:', error);
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch sheet data",
-        variant: "destructive"
-      });
-      
+      console.error('Error parsing Google Sheets URL:', error);
       return null;
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  // Save import configuration
-  const saveImportConfiguration = async (config: Omit<ImportConfiguration, 'id' | 'created_at' | 'updated_at' | 'last_used'>) => {
+  
+  // Fetch sheet data
+  const fetchSheetData = async (url: string): Promise<SheetData> => {
+    setIsLoadingSheet(true);
+    setSheetError(null);
+    
     try {
+      const sheetId = getSheetIdFromUrl(url);
+      
+      if (!sheetId) {
+        throw new Error('Invalid Google Sheets URL');
+      }
+      
+      // For the sake of this example, we'll simulate the sheet data
+      // In a real app, you would call the Google Sheets API
+      
+      // Simulated data for the example
+      const simulatedHeaders = [
+        'Name', 'SKU', 'Description', 'Client Price', 
+        'Quotation Price', 'Margin', 'Active', 'Extra Field 1', 
+        'Extra Field 2'
+      ];
+      
+      const simulatedRows = Array(15).fill(0).map((_, i) => [
+        `Product ${i + 1}`,
+        `SKU-${1000 + i}`,
+        `Description for product ${i + 1}`,
+        `${Math.floor(Math.random() * 5000) + 1000}`,
+        `${Math.floor(Math.random() * 8000) + 2000}`,
+        `${Math.floor(Math.random() * 30) + 10}`,
+        i % 3 === 0 ? 'No' : 'Yes',
+        `Value ${i} for extra field 1`,
+        `Value ${i} for extra field 2`
+      ]);
+      
+      // Format the data
+      const headers: SheetColumn[] = simulatedHeaders.map((header, index) => ({
+        header,
+        index
+      }));
+      
+      return {
+        headers,
+        rows: simulatedRows
+      };
+    } catch (error) {
+      console.error('Error fetching sheet data:', error);
+      setSheetError(error instanceof Error ? error.message : 'Unknown error occurred');
+      throw error;
+    } finally {
+      setIsLoadingSheet(false);
+    }
+  };
+  
+  // Save import configuration
+  const saveImportConfig = useMutation({
+    mutationFn: async (config: Omit<ImportConfiguration, 'id' | 'created_at' | 'updated_at' | 'last_used'>) => {
       const { data, error } = await supabase
         .from('import_configurations')
         .insert(config)
-        .select()
+        .select('*')
         .single();
       
       if (error) throw error;
-      
+      return data as ImportConfiguration;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['import_configurations'] });
       toast({
         title: "Configuration Saved",
-        description: "Import configuration has been saved successfully."
+        description: "Import configuration has been saved successfully.",
       });
-      
-      return data as ImportConfiguration;
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error saving import configuration:', error);
-      
       toast({
         title: "Error",
-        description: "Failed to save import configuration",
-        variant: "destructive"
+        description: "Failed to save import configuration. Please try again.",
+        variant: "destructive",
       });
-      
-      return null;
     }
-  };
-
-  // Get import configurations
-  const getImportConfigurations = async () => {
-    try {
+  });
+  
+  // Get saved configurations
+  const { data: savedConfigs, isLoading: isLoadingConfigs } = useQuery({
+    queryKey: ['import_configurations'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('import_configurations')
         .select('*')
         .order('last_used', { ascending: false });
       
       if (error) throw error;
-      
       return data as ImportConfiguration[];
-    } catch (error) {
-      console.error('Error fetching import configurations:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to fetch import configurations",
-        variant: "destructive"
-      });
-      
-      return [];
     }
-  };
-
+  });
+  
   return {
-    isLoading,
-    sheetData,
     fetchSheetData,
-    saveImportConfiguration,
-    getImportConfigurations
+    sheetData,
+    setSheetData,
+    isLoadingSheet,
+    sheetError,
+    saveImportConfig,
+    savedConfigs,
+    isLoadingConfigs
   };
 };
+
+export const defaultColumnMappings: ColumnMapping[] = [
+  { sourceColumn: '', targetField: 'name', isRequired: true },
+  { sourceColumn: '', targetField: 'sku' },
+  { sourceColumn: '', targetField: 'description' },
+  { sourceColumn: '', targetField: 'client_price', isRequired: true },
+  { sourceColumn: '', targetField: 'quotation_price', isRequired: true },
+  { sourceColumn: '', targetField: 'margin', isRequired: true },
+  { sourceColumn: '', targetField: 'active' },
+  { sourceColumn: '', targetField: 'extra_data' }
+];
