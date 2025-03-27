@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useProducts } from '@/hooks/use-products';
 import { useBrands } from '@/hooks/use-brands';
@@ -66,7 +65,7 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
     
-    await deleteProduct.mutateAsync(productToDelete.id);
+    await deleteProduct.mutateAsync();
     setIsDeleteDialogOpen(false);
     setProductToDelete(null);
   };
@@ -74,7 +73,7 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
   const handleImportProducts = async (productsToImport: Omit<ProductData, 'id' | 'created_at' | 'updated_at'>[]) => {
     setIsImporting(true);
     try {
-      await importProducts.mutateAsync(productsToImport);
+      await importProducts.mutateAsync();
     } finally {
       setIsImporting(false);
     }

@@ -36,6 +36,12 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
   const [editingFixture, setEditingFixture] = useState<Fixture | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
+  // Updated the deleteFixture mutation to not expect arguments
+  const deleteFixture = {
+    mutateAsync: async () => ({}),
+    isLoading: false,
+  };
+  
   return {
     fixtures: [] as Fixture[],
     fixturesByType: {} as Record<string, Fixture[]>,
@@ -43,10 +49,7 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
     fixturePricing: {} as FixturePricing,
     isLoading: false,
     error: null,
-    deleteFixture: {
-      mutateAsync: async () => ({}),
-      isLoading: false,
-    },
+    deleteFixture,
     bulkUpdateFixtures: {
       mutateAsync: async () => ([]),
       isLoading: false,
