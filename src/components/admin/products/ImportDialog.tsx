@@ -89,7 +89,7 @@ export function ImportDialog({
     
     setIsLoading(true);
     try {
-      const data = await fetchSheetData(sheetUrl);
+      const data = await fetchSheetData();
       setSheetData(data);
       setStep('mapping');
     } catch (error) {

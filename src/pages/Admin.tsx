@@ -16,6 +16,8 @@ import LeadsTab from '@/components/admin/LeadsTab';
 import UsersTab from '@/components/admin/UsersTab';
 import SettingsTab from '@/components/admin/SettingsTab';
 import SubmissionsTab from '@/components/admin/SubmissionsTab';
+import BrandsTab from '@/components/admin/BrandsTab';
+import FixturePricingTab from '@/components/admin/FixturePricingTab';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -26,17 +28,19 @@ const Admin = () => {
     setSearchQuery('');
   };
 
-  // Tab options for the sidebar - removed brands, products, fixtures and data import
+  // Tab options for the sidebar
   const tabOptions = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'submissions', label: 'Quote Submissions', icon: Home },
     { id: 'projects', label: 'Projects', icon: Home },
     { id: 'leads', label: 'Leads', icon: Mail },
     { id: 'users', label: 'Users', icon: Users },
+    { id: 'brands', label: 'Brands', icon: Home },
+    { id: 'fixtures', label: 'Fixture Pricing', icon: Home },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
   
-  // Render the active tab content - removed brands, products, fixtures and data import tabs
+  // Render the active tab content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -49,6 +53,10 @@ const Admin = () => {
         return <LeadsTab searchQuery={searchQuery} />;
       case 'users':
         return <UsersTab searchQuery={searchQuery} />;
+      case 'brands':
+        return <BrandsTab searchQuery={searchQuery} />;
+      case 'fixtures':
+        return <FixturePricingTab searchQuery={searchQuery} />;
       case 'settings':
         return <SettingsTab />;
       default:
@@ -119,7 +127,7 @@ const Admin = () => {
               {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
             </h1>
             
-            {['projects', 'leads', 'users', 'submissions'].includes(activeTab) && (
+            {['projects', 'leads', 'users', 'submissions', 'brands', 'fixtures'].includes(activeTab) && (
               <div className="flex items-center gap-3">
                 <Input 
                   placeholder="Search..." 

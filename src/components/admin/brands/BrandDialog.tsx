@@ -59,12 +59,9 @@ const BrandDialog = ({ open, onOpenChange, editingBrand, onClose }: BrandDialogP
   // Handle form submission
   const onSubmit = async (data: Omit<BrandData, 'id' | 'created_at' | 'updated_at'>) => {
     if (editingBrand) {
-      await updateBrand.mutateAsync({
-        id: editingBrand.id,
-        ...data,
-      });
+      await updateBrand.mutateAsync();
     } else {
-      await createBrand.mutateAsync(data);
+      await createBrand.mutateAsync();
     }
     
     onOpenChange(false);
@@ -132,9 +129,9 @@ const BrandDialog = ({ open, onOpenChange, editingBrand, onClose }: BrandDialogP
               </Button>
               <Button 
                 type="submit" 
-                disabled={createBrand.isPending || updateBrand.isPending}
+                disabled={createBrand.isLoading || updateBrand.isLoading}
               >
-                {createBrand.isPending || updateBrand.isPending 
+                {createBrand.isLoading || updateBrand.isLoading 
                   ? 'Saving...'
                   : editingBrand ? 'Update Brand' : 'Create Brand'
                 }

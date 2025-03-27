@@ -59,7 +59,7 @@ const BrandTable = ({ searchQuery }: BrandTableProps) => {
   const handleDeleteBrand = async () => {
     if (!brandToDelete) return;
     
-    await deleteBrand.mutateAsync(brandToDelete.id);
+    await deleteBrand.mutateAsync();
     setIsDeleteDialogOpen(false);
     setBrandToDelete(null);
   };

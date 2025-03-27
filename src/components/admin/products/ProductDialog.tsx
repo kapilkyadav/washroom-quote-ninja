@@ -158,13 +158,10 @@ export function ProductDialog({
     try {
       if (product) {
         // Update existing product
-        await updateProduct.mutateAsync({
-          id: product.id,
-          ...values
-        });
+        await updateProduct.mutateAsync();
       } else {
         // Create new product
-        await createProduct.mutateAsync(values);
+        await createProduct.mutateAsync();
       }
       onOpenChange(false);
       if (onClose) onClose();
@@ -375,4 +372,4 @@ export function ProductDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
