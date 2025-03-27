@@ -33,11 +33,10 @@ export function useFixtureEditing() {
             description: formData.description || null,
             price: formData.price
           })
-          .select('*')
-          .single();
+          .select();
 
         if (error) throw error;
-        return data;
+        return data?.[0];
       } finally {
         setIsSubmitting(false);
       }
@@ -76,11 +75,10 @@ export function useFixtureEditing() {
             updated_at: new Date().toISOString()
           })
           .eq('id', id)
-          .select('*')
-          .single();
+          .select();
 
         if (error) throw error;
-        return data;
+        return data?.[0];
       } finally {
         setIsSubmitting(false);
       }

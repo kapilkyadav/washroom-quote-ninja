@@ -123,11 +123,10 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
             .from('fixtures')
             .update({ price, updated_at: new Date().toISOString() })
             .eq('id', id)
-            .select('*')
-            .single();
+            .select();
           
           if (error) throw error;
-          return data;
+          return data?.[0];
         })
       );
       

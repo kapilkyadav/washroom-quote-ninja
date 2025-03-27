@@ -1,449 +1,362 @@
 
-import { useState, useEffect } from 'react';
-import { useGoogleSheets } from '@/hooks/use-google-sheets';
-import { useProducts } from '@/hooks/use-products';
-import { useBrands } from '@/hooks/use-brands';
-import { ProductData, ColumnMapping, BrandData } from '@/types';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
+import React, { useState, useEffect } from 'react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+import { Button } from '@/components/ui/button';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
 } from '@/components/ui/table';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, Database, FileSpreadsheet, Upload, Check, X } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { BrandData, ProductData } from '@/types';
+import { useGoogleSheets, SheetData, ColumnMapping } from '@/hooks/use-google-sheets';
 
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  brands: BrandData[];
+  onImport: (products: Omit<ProductData, 'id' | 'created_at' | 'updated_at'>[]) => void;
+  isSubmitting: boolean;
 }
 
-const ImportDialog = ({ open, onOpenChange }: ImportDialogProps) => {
-  const { fetchSheetData, isLoading, sheetData, saveImportConfiguration } = useGoogleSheets();
-  const { bulkCreateProducts } = useProducts();
-  const { brands } = useBrands();
+export function ImportDialog({
+  open,
+  onOpenChange,
+  brands,
+  onImport,
+  isSubmitting
+}: ImportDialogProps) {
+  const { 
+    fetchSheetData, 
+    sheetData, 
+    setSheetData,
+    savedConfigs,
+    loadConfiguration,
+    isLoadingConfigs 
+  } = useGoogleSheets();
   
-  const [activeStep, setActiveStep] = useState(0);
   const [sheetUrl, setSheetUrl] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
-  const [mappings, setMappings] = useState<Record<string, string>>({});
-  const [configName, setConfigName] = useState('');
-  const [saveConfig, setSaveConfig] = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [isImporting, setIsImporting] = useState(false);
+  const [step, setStep] = useState<'url' | 'mapping' | 'preview'>('url');
+  const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
+  const [previewProducts, setPreviewProducts] = useState<Omit<ProductData, 'id' | 'created_at' | 'updated_at'>[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Reset state when dialog is opened/closed
-  useEffect(() => {
-    if (!open) {
-      setTimeout(() => {
-        setActiveStep(0);
-        setSheetUrl('');
-        setSelectedBrandId(null);
-        setMappings({});
-        setConfigName('');
-        setSaveConfig(false);
-        setImportProgress(0);
-        setIsImporting(false);
-      }, 300);
-    }
-  }, [open]);
-  
-  // Product fields for mapping
-  const productFields = [
-    { key: 'name', label: 'Product Name', required: true },
-    { key: 'sku', label: 'SKU', required: false },
-    { key: 'description', label: 'Description', required: false },
-    { key: 'client_price', label: 'Client Price', required: true },
-    { key: 'quotation_price', label: 'Quotation Price', required: true },
-    { key: 'extra_data', label: 'Extra Data (JSON)', required: false },
+  // Available target fields for mapping
+  const targetFields = [
+    { id: 'name', label: 'Product Name', isRequired: true },
+    { id: 'sku', label: 'SKU' },
+    { id: 'description', label: 'Description' },
+    { id: 'client_price', label: 'Client Price', isRequired: true },
+    { id: 'quotation_price', label: 'Quotation Price' },
+    { id: 'margin', label: 'Margin (%)' },
+    { id: 'extra_data', label: 'Extra Data (as JSON)' }
   ];
   
-  // Fetch sheet data
-  const handleFetchSheet = async () => {
-    if (!sheetUrl) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid Google Sheet URL",
-        variant: "destructive"
-      });
-      return;
+  // Reset dialog state when it opens
+  useEffect(() => {
+    if (open) {
+      setSheetUrl('');
+      setSelectedBrandId(null);
+      setStep('url');
+      setColumnMappings({});
+      setPreviewProducts([]);
+      setSheetData({ title: '', columns: [], rows: [] });
     }
+  }, [open, setSheetData]);
+  
+  // Handle fetch sheet data
+  const handleFetchSheet = async () => {
+    if (!sheetUrl) return;
     
-    const data = await fetchSheetData(sheetUrl);
-    
-    if (data) {
-      setActiveStep(1);
+    setIsLoading(true);
+    try {
+      const data = await fetchSheetData(sheetUrl);
+      setSheetData(data);
+      setStep('mapping');
+    } catch (error) {
+      console.error('Failed to fetch sheet:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  // Handle mapping change
+  // Handle column mapping change
   const handleMappingChange = (sourceColumn: string, targetField: string) => {
-    setMappings(prev => ({
+    setColumnMappings(prev => ({
       ...prev,
       [sourceColumn]: targetField
     }));
   };
   
-  // Check if all required fields are mapped
-  const areRequiredFieldsMapped = () => {
-    const requiredFields = productFields.filter(field => field.required).map(field => field.key);
-    const mappedFields = Object.values(mappings);
+  // Go to preview step
+  const handlePreview = () => {
+    // Check required mappings
+    const requiredFields = targetFields.filter(field => field.isRequired).map(field => field.id);
+    const mappedFields = Object.values(columnMappings);
     
-    return requiredFields.every(field => mappedFields.includes(field));
-  };
-  
-  // Preview the mapped data
-  const previewMappedData = () => {
-    if (!sheetData || !sheetData.rows.length) return [];
+    const missingRequiredFields = requiredFields.filter(field => !mappedFields.includes(field));
     
-    return sheetData.rows.slice(0, 5).map(row => {
-      const mappedRow: Record<string, any> = {};
+    if (missingRequiredFields.length > 0) {
+      alert(`Please map the following required fields: ${missingRequiredFields.join(', ')}`);
+      return;
+    }
+    
+    if (!selectedBrandId) {
+      alert('Please select a brand for the imported products');
+      return;
+    }
+    
+    // Convert sheet data to product data using mappings
+    const products = sheetData.rows.map(row => {
+      const product: any = {
+        brand_id: selectedBrandId,
+        name: '',
+        client_price: 0,
+        quotation_price: 0,
+        margin: 0,
+        active: true,
+        extra_data: {}
+      };
       
-      Object.entries(mappings).forEach(([sourceColumn, targetField]) => {
-        if (targetField !== 'skip') {
-          mappedRow[targetField] = row[sourceColumn];
+      // Apply mappings
+      Object.entries(columnMappings).forEach(([sourceColumn, targetField]) => {
+        const value = row[sourceColumn];
+        
+        if (targetField === 'extra_data') {
+          // Store unmapped columns in extra_data
+          product.extra_data[sourceColumn] = value;
+        } else if (targetField === 'client_price' || targetField === 'quotation_price' || targetField === 'margin') {
+          // Convert numeric fields
+          product[targetField] = parseFloat(value) || 0;
+        } else {
+          product[targetField] = value;
         }
       });
       
-      return mappedRow;
-    });
-  };
-  
-  // Import products
-  const handleImport = async () => {
-    if (!sheetData || !selectedBrandId) return;
-    
-    setIsImporting(true);
-    
-    try {
-      // Create products array with mapped data
-      const productsToImport: Omit<ProductData, 'id' | 'created_at' | 'updated_at'>[] = [];
-      
-      sheetData.rows.forEach((row, index) => {
-        // Update progress
-        setImportProgress(Math.floor((index / sheetData.rows.length) * 100));
-        
-        const productData: Record<string, any> = {
-          brand_id: selectedBrandId,
-          active: true,
-        };
-        
-        // Apply mappings
-        Object.entries(mappings).forEach(([sourceColumn, targetField]) => {
-          if (targetField !== 'skip') {
-            // For numeric fields, ensure they are numbers
-            if (['client_price', 'quotation_price', 'margin'].includes(targetField)) {
-              productData[targetField] = parseFloat(row[sourceColumn]) || 0;
-            } else if (targetField === 'extra_data') {
-              // Initialize extra_data if it doesn't exist
-              if (!productData.extra_data) {
-                productData.extra_data = {};
-              }
-              // Add to extra_data field
-              productData.extra_data[sourceColumn] = row[sourceColumn];
-            } else {
-              productData[targetField] = row[sourceColumn];
-            }
-          }
-        });
-        
-        // Calculate margin if it's not mapped
-        if (!productData.margin && productData.client_price && productData.quotation_price) {
-          productData.margin = ((productData.quotation_price - productData.client_price) / productData.client_price) * 100;
-        }
-        
-        productsToImport.push(productData as any);
-      });
-      
-      // Save import configuration if requested
-      if (saveConfig && configName) {
-        await saveImportConfiguration({
-          name: configName,
-          source_type: 'google_sheet',
-          source_url: sheetUrl,
-          column_mappings: mappings
-        });
+      // Auto calculate missing prices/margin
+      if (product.client_price && !product.quotation_price && product.margin) {
+        product.quotation_price = product.client_price * (1 + product.margin / 100);
+      } else if (product.client_price && product.quotation_price && !product.margin) {
+        product.margin = ((product.quotation_price - product.client_price) / product.client_price) * 100;
       }
       
-      // Import products
-      await bulkCreateProducts.mutateAsync(productsToImport);
-      
-      // Close dialog
-      onOpenChange(false);
-      
-    } catch (error) {
-      console.error('Import error:', error);
-      toast({
-        title: "Import Error",
-        description: "An error occurred during import.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsImporting(false);
-    }
+      return product as Omit<ProductData, 'id' | 'created_at' | 'updated_at'>;
+    });
+    
+    setPreviewProducts(products);
+    setStep('preview');
   };
+  
+  // Handle final import
+  const handleImport = () => {
+    onImport(previewProducts);
+    onOpenChange(false);
+  };
+  
+  // Render the URL input step
+  const renderUrlStep = () => (
+    <>
+      <DialogDescription>
+        Enter a Google Sheets URL to import product data. The sheet must be publicly accessible.
+      </DialogDescription>
+      
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="sheet-url">Google Sheet URL</Label>
+          <Input
+            id="sheet-url"
+            placeholder="https://docs.google.com/spreadsheets/d/..."
+            value={sheetUrl}
+            onChange={(e) => setSheetUrl(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            Paste the URL of the Google Sheet containing your product data
+          </p>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="brand">Brand</Label>
+          <Select onValueChange={(value) => setSelectedBrandId(parseInt(value))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a brand for the products" />
+            </SelectTrigger>
+            <SelectContent>
+              {brands.map((brand) => (
+                <SelectItem key={brand.id} value={brand.id.toString()}>
+                  {brand.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            All imported products will be associated with this brand
+          </p>
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <Button onClick={() => onOpenChange(false)} variant="outline">
+          Cancel
+        </Button>
+        <Button onClick={handleFetchSheet} disabled={!sheetUrl || isLoading}>
+          {isLoading ? 'Loading...' : 'Next'}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+  
+  // Render the mapping step
+  const renderMappingStep = () => (
+    <>
+      <DialogDescription>
+        Map columns from your spreadsheet to product fields
+      </DialogDescription>
+      
+      <div className="space-y-4 py-4 max-h-[60vh] overflow-auto">
+        <h3 className="text-lg font-medium">Column Mapping</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Select how each column from your spreadsheet should be mapped to product fields
+        </p>
+        
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Sheet Column</TableHead>
+                <TableHead>Maps To</TableHead>
+                <TableHead>Sample Data</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sheetData.columns.map((column) => (
+                <TableRow key={column}>
+                  <TableCell className="font-medium">{column}</TableCell>
+                  <TableCell>
+                    <Select 
+                      value={columnMappings[column] || ''} 
+                      onValueChange={(value) => handleMappingChange(column, value)}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Not Mapped</SelectItem>
+                        {targetFields.map((field) => (
+                          <SelectItem key={field.id} value={field.id}>
+                            {field.label} {field.isRequired ? '*' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="truncate max-w-[200px]">
+                    {sheetData.rows[0]?.[column] || ''}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <Button onClick={() => setStep('url')} variant="outline">
+          Back
+        </Button>
+        <Button onClick={handlePreview}>
+          Preview
+        </Button>
+      </DialogFooter>
+    </>
+  );
+  
+  // Render the preview step
+  const renderPreviewStep = () => (
+    <>
+      <DialogDescription>
+        Review the imported products before finalizing
+      </DialogDescription>
+      
+      <div className="space-y-4 py-4 max-h-[60vh] overflow-auto">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">Preview ({previewProducts.length} products)</h3>
+          <p className="text-sm text-muted-foreground">
+            Brand: {brands.find(b => b.id === selectedBrandId)?.name}
+          </p>
+        </div>
+        
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead className="text-right">Client Price</TableHead>
+                <TableHead className="text-right">Quotation Price</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {previewProducts.slice(0, 10).map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.sku}</TableCell>
+                  <TableCell className="text-right">{product.client_price}</TableCell>
+                  <TableCell className="text-right">{product.quotation_price}</TableCell>
+                </TableRow>
+              ))}
+              {previewProducts.length > 10 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    + {previewProducts.length - 10} more products
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <Button onClick={() => setStep('mapping')} variant="outline">
+          Back
+        </Button>
+        <Button onClick={handleImport} disabled={isSubmitting}>
+          {isSubmitting ? 'Importing...' : 'Import Products'}
+        </Button>
+      </DialogFooter>
+    </>
+  );
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Import Products from Google Sheets</DialogTitle>
-          <DialogDescription>
-            Import product data from Google Sheets and map the columns to your product fields.
-          </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeStep.toString()} onValueChange={(v) => setActiveStep(parseInt(v))}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="0" disabled={activeStep < 0}>
-              1. Connect Sheet
-            </TabsTrigger>
-            <TabsTrigger value="1" disabled={activeStep < 1}>
-              2. Map Columns
-            </TabsTrigger>
-            <TabsTrigger value="2" disabled={activeStep < 2}>
-              3. Review & Import
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="0" className="py-4">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="sheet-url">Google Sheet URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="sheet-url"
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                    value={sheetUrl}
-                    onChange={(e) => setSheetUrl(e.target.value)}
-                  />
-                  <Button 
-                    onClick={handleFetchSheet} 
-                    disabled={isLoading || !sheetUrl}
-                  >
-                    {isLoading ? 'Loading...' : 'Connect'}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Enter the URL of the Google Sheet containing your product data. The sheet must be public or shared with view access.
-                </p>
-              </div>
-              
-              <div className="flex items-center justify-center p-6 border-2 border-dashed rounded-md">
-                <div className="text-center">
-                  <FileSpreadsheet className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <p className="mt-2 text-sm font-medium">
-                    Your sheet should include columns for product data
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Required fields: Product Name, Client Price, Quotation Price
-                  </p>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="1" className="py-4">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="brand-select">Select Brand for Products</Label>
-                <Select 
-                  onValueChange={(value) => setSelectedBrandId(Number(value))}
-                  value={selectedBrandId?.toString() || ''}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands?.map((brand) => (
-                      <SelectItem key={brand.id} value={brand.id.toString()}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  All imported products will be associated with this brand.
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Map Sheet Columns to Product Fields</Label>
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Sheet Column</TableHead>
-                        <TableHead>Map To</TableHead>
-                        <TableHead>Required</TableHead>
-                        <TableHead>Sample Data</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sheetData?.headers.map((header) => (
-                        <TableRow key={header}>
-                          <TableCell className="font-medium">{header}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={mappings[header] || 'skip'}
-                              onValueChange={(value) => handleMappingChange(header, value)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Map to..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="skip">Skip this column</SelectItem>
-                                {productFields.map((field) => (
-                                  <SelectItem key={field.key} value={field.key}>
-                                    {field.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            {productFields.find(field => field.key === mappings[header])?.required 
-                              ? <Check size={16} className="text-green-500" /> 
-                              : <X size={16} className="text-muted-foreground" />
-                            }
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {sheetData.rows[0]?.[header] || ''}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-              
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setActiveStep(0)}>
-                  Back
-                </Button>
-                <Button 
-                  onClick={() => setActiveStep(2)} 
-                  disabled={!selectedBrandId || !areRequiredFieldsMapped()}
-                >
-                  Continue <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="2" className="py-4">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label>Data Preview</Label>
-                <div className="border rounded-md overflow-auto max-h-64">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {productFields.map((field) => (
-                          <TableHead key={field.key}>{field.label}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {previewMappedData().map((row, index) => (
-                        <TableRow key={index}>
-                          {productFields.map((field) => (
-                            <TableCell key={field.key}>
-                              {row[field.key] !== undefined 
-                                ? String(row[field.key])
-                                : '-'
-                              }
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Showing preview of first 5 rows. Total rows to import: {sheetData?.rows.length || 0}
-                </p>
-              </div>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="save-config"
-                      checked={saveConfig}
-                      onChange={(e) => setSaveConfig(e.target.checked)}
-                    />
-                    <Label htmlFor="save-config">Save this import configuration for future use</Label>
-                  </div>
-                  
-                  {saveConfig && (
-                    <div className="mt-4">
-                      <Label htmlFor="config-name">Configuration Name</Label>
-                      <Input
-                        id="config-name"
-                        placeholder="e.g., Monthly Product Import"
-                        value={configName}
-                        onChange={(e) => setConfigName(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {isImporting && (
-                <div className="space-y-2">
-                  <Label>Import Progress</Label>
-                  <Progress value={importProgress} className="h-2" />
-                  <p className="text-sm text-muted-foreground text-center">
-                    Importing products... {importProgress}%
-                  </p>
-                </div>
-              )}
-              
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setActiveStep(1)}>
-                  Back
-                </Button>
-                <Button 
-                  onClick={handleImport} 
-                  disabled={isImporting || !selectedBrandId || !areRequiredFieldsMapped()}
-                  className="gap-2"
-                >
-                  <Upload size={16} />
-                  {isImporting ? 'Importing...' : 'Import Products'}
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+        {step === 'url' && renderUrlStep()}
+        {step === 'mapping' && renderMappingStep()}
+        {step === 'preview' && renderPreviewStep()}
       </DialogContent>
     </Dialog>
   );
-};
-
-export default ImportDialog;
+}

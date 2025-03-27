@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFixtures } from '@/hooks/use-fixtures';
 import { useFixtureEditing } from '@/hooks/use-fixture-editing';
-import { useAddFixture } from '@/hooks/use-add-fixture';
 import FixtureTypeTab from './fixtures/FixtureTypeTab';
 
 interface FixturePricingTabProps {
@@ -14,55 +13,134 @@ interface FixturePricingTabProps {
 
 const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
   const { 
-    electricalFixtures, 
-    bathroomFixtures, 
-    setElectricalFixtures, 
-    setBathroomFixtures, 
+    fixtures, 
+    fixturesByType,
     isLoading,
-    hasUnsavedChanges,
-    saveAllChanges
+    deleteFixture
   } = useFixtures();
 
   const {
-    isEditing,
-    editValues,
-    activeTab,
-    setActiveTab,
-    handleEditStart,
-    handleEditChange,
-    handleSaveEdit,
-    handleCancelEdit,
-    handleDeleteFixture
-  } = useFixtureEditing({ 
-    electricalFixtures,
-    bathroomFixtures,
-    setElectricalFixtures, 
-    setBathroomFixtures 
+    createFixture,
+    updateFixture,
+    isSubmitting
+  } = useFixtureEditing();
+
+  const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState({ name: '', price: 0, description: '' });
+  const [activeTab, setActiveTab] = useState('electrical');
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newFixture, setNewFixture] = useState({
+    id: '',
+    name: '',
+    price: 0,
+    description: ''
   });
 
-  const {
-    newFixture,
-    isAddingNew,
-    setIsAddingNew,
-    handleNewFixtureChange,
-    handleAddFixture
-  } = useAddFixture({
-    electricalFixtures,
-    bathroomFixtures,
-    setElectricalFixtures,
-    setBathroomFixtures,
-    activeTab
-  });
+  // Handle starting edit mode
+  const handleEditStart = (id: string, fixture: { name: string; price: number; description?: string }) => {
+    setIsEditing(id);
+    setEditValues({
+      name: fixture.name,
+      price: fixture.price,
+      description: fixture.description || ''
+    });
+  };
 
-  const filteredElectricalFixtures = Object.entries(electricalFixtures).filter(([id, fixture]) => 
-    fixture.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Handle edit form changes
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditValues(prev => ({
+      ...prev,
+      [name]: name === 'price' ? parseFloat(value) || 0 : value
+    }));
+  };
 
-  const filteredBathroomFixtures = Object.entries(bathroomFixtures).filter(([id, fixture]) => 
-    fixture.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Handle saving edited fixture
+  const handleSaveEdit = async (id: string) => {
+    if (!isEditing) return;
+    
+    const fixtureType = activeTab;
+    
+    const fixture = fixtures?.find(f => f.fixture_id === id);
+    if (!fixture) return;
+    
+    await updateFixture.mutateAsync({
+      id: fixture.id,
+      formData: {
+        name: editValues.name,
+        fixture_id: id,
+        type: fixtureType,
+        description: editValues.description,
+        price: editValues.price
+      }
+    });
+    
+    setIsEditing(null);
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setIsEditing(null);
+  };
+
+  // Handle new fixture changes
+  const handleNewFixtureChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewFixture(prev => ({
+      ...prev,
+      [name]: name === 'price' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  // Handle adding new fixture
+  const handleAddFixture = async () => {
+    if (!newFixture.id || !newFixture.name) return;
+    
+    const fixtureType = activeTab;
+    
+    await createFixture.mutateAsync({
+      name: newFixture.name,
+      fixture_id: newFixture.id,
+      type: fixtureType,
+      description: newFixture.description,
+      price: newFixture.price
+    });
+    
+    setNewFixture({ id: '', name: '', price: 0, description: '' });
+    setIsAddingNew(false);
+  };
+
+  // Handle deleting fixture
+  const handleDeleteFixture = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    
+    const fixture = fixtures?.find(f => f.fixture_id === id);
+    if (!fixture) return;
+    
+    await deleteFixture.mutateAsync(fixture.id);
+  };
+
+  // Get fixtures by type and filter by search query
+  const getFilteredFixtures = (type: string) => {
+    const fixturesOfType = fixturesByType[type] || [];
+    
+    return fixturesOfType
+      .filter(fixture => 
+        fixture.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .map(fixture => [
+        fixture.fixture_id,
+        {
+          name: fixture.name,
+          price: fixture.price,
+          description: fixture.description || undefined
+        }
+      ]);
+  };
+
+  const filteredElectricalFixtures = getFilteredFixtures('electrical');
+  const filteredBathroomFixtures = getFilteredFixtures('bathroom');
 
   return (
     <div className="space-y-6">
@@ -73,17 +151,6 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
         </div>
         
         <div className="flex items-center gap-2">
-          {hasUnsavedChanges && (
-            <Button 
-              variant="default"
-              className="flex items-center gap-2"
-              onClick={saveAllChanges}
-            >
-              <Save size={16} />
-              Save All Changes
-            </Button>
-          )}
-          
           <Button 
             className="flex items-center gap-2"
             onClick={() => setIsAddingNew(true)}

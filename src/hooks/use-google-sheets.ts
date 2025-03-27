@@ -1,157 +1,229 @@
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { ColumnMapping, ImportConfiguration, ProductData } from '@/types';
+import { ImportConfiguration } from '@/types';
 
-// API key for accessing Google Sheets (this would need to be environment variable in production)
-// const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-
-export interface SheetColumn {
-  header: string;
-  index: number;
-}
+export type SheetColumn = string;
 
 export interface SheetData {
-  headers: SheetColumn[];
-  rows: string[][];
+  title: string;
+  columns: SheetColumn[];
+  rows: Record<string, string>[];
+}
+
+export interface ColumnMapping {
+  sourceColumn: string;
+  targetField: string;
+  isRequired?: boolean;
 }
 
 export const useGoogleSheets = () => {
-  const queryClient = useQueryClient();
-  const [sheetData, setSheetData] = useState<SheetData | null>(null);
-  const [isLoadingSheet, setIsLoadingSheet] = useState(false);
-  const [sheetError, setSheetError] = useState<string | null>(null);
-  
-  // Get sheet ID from URL
-  const getSheetIdFromUrl = (url: string): string | null => {
-    try {
-      // Extract sheet ID from various Google Sheets URL formats
-      const regex = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
-      const match = url.match(regex);
-      return match ? match[1] : null;
-    } catch (error) {
-      console.error('Error parsing Google Sheets URL:', error);
-      return null;
-    }
-  };
-  
-  // Fetch sheet data
-  const fetchSheetData = async (url: string): Promise<SheetData> => {
-    setIsLoadingSheet(true);
-    setSheetError(null);
-    
-    try {
-      const sheetId = getSheetIdFromUrl(url);
-      
-      if (!sheetId) {
-        throw new Error('Invalid Google Sheets URL');
-      }
-      
-      // For the sake of this example, we'll simulate the sheet data
-      // In a real app, you would call the Google Sheets API
-      
-      // Simulated data for the example
-      const simulatedHeaders = [
-        'Name', 'SKU', 'Description', 'Client Price', 
-        'Quotation Price', 'Margin', 'Active', 'Extra Field 1', 
-        'Extra Field 2'
-      ];
-      
-      const simulatedRows = Array(15).fill(0).map((_, i) => [
-        `Product ${i + 1}`,
-        `SKU-${1000 + i}`,
-        `Description for product ${i + 1}`,
-        `${Math.floor(Math.random() * 5000) + 1000}`,
-        `${Math.floor(Math.random() * 8000) + 2000}`,
-        `${Math.floor(Math.random() * 30) + 10}`,
-        i % 3 === 0 ? 'No' : 'Yes',
-        `Value ${i} for extra field 1`,
-        `Value ${i} for extra field 2`
-      ]);
-      
-      // Format the data
-      const headers: SheetColumn[] = simulatedHeaders.map((header, index) => ({
-        header,
-        index
-      }));
-      
-      return {
-        headers,
-        rows: simulatedRows
-      };
-    } catch (error) {
-      console.error('Error fetching sheet data:', error);
-      setSheetError(error instanceof Error ? error.message : 'Unknown error occurred');
-      throw error;
-    } finally {
-      setIsLoadingSheet(false);
-    }
-  };
-  
-  // Save import configuration
-  const saveImportConfig = useMutation({
-    mutationFn: async (config: Omit<ImportConfiguration, 'id' | 'created_at' | 'updated_at' | 'last_used'>) => {
-      const { data, error } = await supabase
-        .from('import_configurations')
-        .insert(config)
-        .select('*')
-        .single();
-      
-      if (error) throw error;
-      return data as ImportConfiguration;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['import_configurations'] });
-      toast({
-        title: "Configuration Saved",
-        description: "Import configuration has been saved successfully.",
-      });
-    },
-    onError: (error) => {
-      console.error('Error saving import configuration:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save import configuration. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const [sheetData, setSheetData] = useState<SheetData>({
+    title: '',
+    columns: [],
+    rows: []
   });
   
-  // Get saved configurations
-  const { data: savedConfigs, isLoading: isLoadingConfigs } = useQuery({
-    queryKey: ['import_configurations'],
-    queryFn: async () => {
+  const [savedConfigs, setSavedConfigs] = useState<ImportConfiguration[]>([]);
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState<boolean>(false);
+  
+  // Fetch existing import configurations from Supabase
+  const loadSavedConfigurations = async () => {
+    setIsLoadingConfigs(true);
+    try {
       const { data, error } = await supabase
         .from('import_configurations')
         .select('*')
         .order('last_used', { ascending: false });
-      
+        
       if (error) throw error;
-      return data as ImportConfiguration[];
+      setSavedConfigs(data as ImportConfiguration[]);
+    } catch (error) {
+      console.error('Error loading import configurations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load saved import configurations.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingConfigs(false);
     }
-  });
+  };
+  
+  useEffect(() => {
+    loadSavedConfigurations();
+  }, []);
+  
+  // Fetch data from Google Sheets
+  const fetchSheetData = async (url: string): Promise<SheetData> => {
+    try {
+      // Validate the URL
+      if (!url || !url.includes('docs.google.com/spreadsheets')) {
+        throw new Error('Invalid Google Sheets URL');
+      }
+      
+      // Extract the sheet ID from the URL
+      const matches = url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!matches || matches.length < 2) {
+        throw new Error('Could not extract Google Sheet ID from URL');
+      }
+      
+      const sheetId = matches[1];
+      
+      // Create a public export URL
+      const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+      
+      // Fetch the CSV data
+      const response = await fetch(exportUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sheet data. Make sure the sheet is publicly accessible.');
+      }
+      
+      const text = await response.text();
+      
+      // Parse CSV
+      const rows = parseCSV(text);
+      
+      if (rows.length === 0) {
+        throw new Error('Sheet appears to be empty');
+      }
+      
+      // Extract headers and data
+      const headers = rows[0];
+      const dataRows = rows.slice(1).map(row => {
+        const rowData: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          rowData[header] = row[index] || '';
+        });
+        return rowData;
+      });
+      
+      // Save the import URL to Supabase
+      await saveImportConfiguration({
+        name: `Import ${new Date().toLocaleString()}`,
+        source_type: 'google_sheet',
+        source_url: url,
+        column_mappings: {}
+      });
+      
+      return {
+        title: `Google Sheet Import`,
+        columns: headers,
+        rows: dataRows
+      };
+    } catch (error) {
+      console.error('Error fetching sheet data:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch sheet data",
+        variant: "destructive"
+      });
+      return {
+        title: '',
+        columns: [],
+        rows: []
+      };
+    }
+  };
+  
+  // Save import configuration to Supabase
+  const saveImportConfiguration = async (config: Omit<ImportConfiguration, 'id' | 'created_at' | 'updated_at' | 'last_used'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('import_configurations')
+        .insert({
+          ...config,
+          last_used: new Date().toISOString()
+        })
+        .select();
+        
+      if (error) throw error;
+      
+      // Refresh the list of configurations
+      loadSavedConfigurations();
+      
+      return data?.[0] as ImportConfiguration;
+    } catch (error) {
+      console.error('Error saving import configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save import configuration.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+  
+  // Load a saved configuration
+  const loadConfiguration = async (id: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('import_configurations')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (error) throw error;
+      
+      // Update the last_used timestamp
+      await supabase
+        .from('import_configurations')
+        .update({ last_used: new Date().toISOString() })
+        .eq('id', id);
+      
+      return data as ImportConfiguration;
+    } catch (error) {
+      console.error('Error loading configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load the selected configuration.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+  
+  // Helper function to parse CSV
+  const parseCSV = (text: string): string[][] => {
+    const lines = text.split('\n');
+    return lines.map(line => {
+      const row: string[] = [];
+      let inQuotes = false;
+      let currentValue = '';
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === ',' && !inQuotes) {
+          row.push(currentValue);
+          currentValue = '';
+        } else if (char === '"') {
+          if (inQuotes && i < line.length - 1 && line[i + 1] === '"') {
+            // Double quotes inside a quoted section
+            currentValue += '"';
+            i++;
+          } else {
+            // Starting or ending quotes
+            inQuotes = !inQuotes;
+          }
+        } else {
+          currentValue += char;
+        }
+      }
+      
+      row.push(currentValue); // Add the last value
+      return row;
+    }).filter(row => row.length > 0 && row.some(cell => cell.trim() !== ''));
+  };
   
   return {
     fetchSheetData,
     sheetData,
     setSheetData,
-    isLoadingSheet,
-    sheetError,
-    saveImportConfig,
     savedConfigs,
+    loadConfiguration,
+    saveImportConfiguration,
     isLoadingConfigs
   };
 };
-
-export const defaultColumnMappings: ColumnMapping[] = [
-  { sourceColumn: '', targetField: 'name', isRequired: true },
-  { sourceColumn: '', targetField: 'sku' },
-  { sourceColumn: '', targetField: 'description' },
-  { sourceColumn: '', targetField: 'client_price', isRequired: true },
-  { sourceColumn: '', targetField: 'quotation_price', isRequired: true },
-  { sourceColumn: '', targetField: 'margin', isRequired: true },
-  { sourceColumn: '', targetField: 'active' },
-  { sourceColumn: '', targetField: 'extra_data' }
-];

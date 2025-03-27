@@ -1,21 +1,23 @@
 
-import { useEffect } from 'react';
+import React from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { ProductData } from '@/types';
-import { useProducts } from '@/hooks/use-products';
-import { useBrands } from '@/hooks/use-brands';
+import * as z from 'zod';
+import { Check, ChevronsUpDown } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -24,189 +26,345 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import { BrandData, ProductData } from '@/types';
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: 'Name must be at least 2 characters.',
+  }),
+  brand_id: z.number().optional(),
+  sku: z.string().optional(),
+  description: z.string().optional(),
+  client_price: z.coerce.number().min(0, {
+    message: 'Price must be a positive number.',
+  }),
+  quotation_price: z.coerce.number().min(0, {
+    message: 'Price must be a positive number.',
+  }),
+  margin: z.coerce.number(),
+  active: z.boolean().default(true),
+});
+
+type ProductFormValues = z.infer<typeof formSchema>;
 
 interface ProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingProduct: ProductData | null;
-  onClose: () => void;
+  product?: ProductData;
+  brands: BrandData[];
+  onSubmit: (values: ProductFormValues) => void;
+  isSubmitting: boolean;
 }
 
-const ProductDialog = ({ open, onOpenChange, editingProduct, onClose }: ProductDialogProps) => {
-  const { createProduct, updateProduct } = useProducts();
-  const { brands, isLoading: brandsLoading } = useBrands();
-  
-  // Define form
-  const form = useForm<Omit<ProductData, 'id' | 'created_at' | 'updated_at' | 'extra_data'>>({
+export function ProductDialog({
+  open,
+  onOpenChange,
+  product,
+  brands,
+  onSubmit,
+  isSubmitting,
+}: ProductDialogProps) {
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      sku: '',
-      description: '',
-      brand_id: 0,
-      client_price: 0,
-      quotation_price: 0,
-      margin: 0,
-      active: true,
-    }
+      name: product?.name || '',
+      brand_id: product?.brand_id || undefined,
+      sku: product?.sku || '',
+      description: product?.description || '',
+      client_price: product?.client_price || 0,
+      quotation_price: product?.quotation_price || 0,
+      margin: product?.margin || 0,
+      active: product?.active ?? true,
+    },
   });
-  
-  // Set form values when editing
-  useEffect(() => {
-    if (editingProduct) {
+
+  // Update form values when product changes
+  React.useEffect(() => {
+    if (product) {
       form.reset({
-        name: editingProduct.name,
-        sku: editingProduct.sku || '',
-        description: editingProduct.description || '',
-        brand_id: editingProduct.brand_id,
-        client_price: editingProduct.client_price,
-        quotation_price: editingProduct.quotation_price,
-        margin: editingProduct.margin,
-        active: editingProduct.active,
+        name: product.name,
+        brand_id: product.brand_id,
+        sku: product.sku || '',
+        description: product.description || '',
+        client_price: product.client_price,
+        quotation_price: product.quotation_price,
+        margin: product.margin,
+        active: product.active,
       });
     } else {
       form.reset({
         name: '',
+        brand_id: undefined,
         sku: '',
         description: '',
-        brand_id: 0,
         client_price: 0,
         quotation_price: 0,
         margin: 0,
         active: true,
       });
     }
-  }, [editingProduct, form]);
-  
-  // Handle form submission
-  const onSubmit = async (data: Omit<ProductData, 'id' | 'created_at' | 'updated_at' | 'extra_data'>) => {
-    if (editingProduct) {
-      await updateProduct.mutateAsync({
-        id: editingProduct.id,
-        ...data,
-      });
-    } else {
-      await createProduct.mutateAsync(data);
-    }
-    
-    onOpenChange(false);
-    onClose();
-  };
-  
-  // Calculate margin when client price or quotation price changes
-  const calculateMargin = (clientPrice: number, quotationPrice: number) => {
-    if (!clientPrice || !quotationPrice) return 0;
-    return ((quotationPrice - clientPrice) / clientPrice) * 100;
-  };
-  
-  // Update margin when prices change
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'client_price' || name === 'quotation_price') {
-        const clientPrice = form.getValues('client_price');
-        const quotationPrice = form.getValues('quotation_price');
-        
-        if (clientPrice && quotationPrice) {
-          const margin = calculateMargin(clientPrice, quotationPrice);
-          form.setValue('margin', Number(margin.toFixed(2)));
-        }
+  }, [product, form]);
+
+  // Calculate margin when prices change
+  React.useEffect(() => {
+    const subscription = form.watch(({ client_price, quotation_price }) => {
+      if (client_price && quotation_price && client_price > 0) {
+        const calculatedMargin = ((quotation_price - client_price) / client_price) * 100;
+        form.setValue('margin', parseFloat(calculatedMargin.toFixed(2)));
       }
     });
-    
     return () => subscription.unsubscribe();
   }, [form]);
-  
+
+  // Update quotation price when margin changes
+  const handleMarginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const margin = parseFloat(e.target.value);
+    const clientPrice = form.getValues('client_price');
+    
+    if (!isNaN(margin) && clientPrice > 0) {
+      const newQuotationPrice = clientPrice * (1 + margin / 100);
+      form.setValue('quotation_price', parseFloat(newQuotationPrice.toFixed(2)));
+    }
+  };
+
+  // Update margin when quotation price changes
+  const handleQuotationPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const quotationPrice = parseFloat(e.target.value);
+    const clientPrice = form.getValues('client_price');
+    
+    if (!isNaN(quotationPrice) && clientPrice > 0) {
+      const newMargin = ((quotationPrice - clientPrice) / clientPrice) * 100;
+      form.setValue('margin', parseFloat(newMargin.toFixed(2)));
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = (values: ProductFormValues) => {
+    onSubmit(values);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+          <DialogTitle>{product ? 'Edit Product' : 'Add New Product'}</DialogTitle>
           <DialogDescription>
-            {editingProduct 
-              ? 'Update the product details below.'
-              : 'Fill in the details below to create a new product.'
-            }
+            {product
+              ? 'Update product details below'
+              : 'Fill in the details to add a new product'}
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                rules={{ required: "Product name is required" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter product name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SKU (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter SKU" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="brand_id"
-              rules={{ required: "Brand is required" }}
+              name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Brand</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    value={field.value ? field.value.toString() : ''}
-                    disabled={brandsLoading}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a brand" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {brands?.map((brand) => (
-                        <SelectItem key={brand.id} value={brand.id.toString()}>
-                          {brand.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Product Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="E.g., Premium Faucet" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
+            <FormField
+              control={form.control}
+              name="brand_id"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Brand</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value
+                            ? brands.find((brand) => brand.id === field.value)?.name || "Select brand"
+                            : "Select brand"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0">
+                      <Command>
+                        <CommandInput placeholder="Search brand..." />
+                        <CommandEmpty>No brand found.</CommandEmpty>
+                        <CommandGroup>
+                          {brands.map((brand) => (
+                            <CommandItem
+                              key={brand.id}
+                              value={brand.name}
+                              onSelect={() => {
+                                form.setValue("brand_id", brand.id);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  brand.id === field.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              {brand.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Select the brand this product belongs to
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sku"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU</FormLabel>
+                  <FormControl>
+                    <Input placeholder="E.g., PF-001" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Optional stock keeping unit identifier
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="client_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Price</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          // Update quotation price based on margin
+                          const clientPrice = parseFloat(e.target.value);
+                          const margin = form.getValues('margin');
+                          if (!isNaN(clientPrice) && !isNaN(margin)) {
+                            const newQuotationPrice = clientPrice * (1 + margin / 100);
+                            form.setValue('quotation_price', parseFloat(newQuotationPrice.toFixed(2)));
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="quotation_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quotation Price</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleQuotationPriceChange(e);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="margin"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Margin (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleMarginChange(e);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="active"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Active</FormLabel>
+                      <FormDescription>
+                        Show this product in listings
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Enter a brief description of the product"
+                    <Textarea
+                      placeholder="Product description..."
                       className="resize-none"
                       {...field}
                     />
@@ -215,112 +373,17 @@ const ProductDialog = ({ open, onOpenChange, editingProduct, onClose }: ProductD
                 </FormItem>
               )}
             />
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="client_price"
-                rules={{ required: "Client price is required" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client Price (₹)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="quotation_price"
-                rules={{ required: "Quotation price is required" }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quotation Price (₹)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="margin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Margin (%)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number"
-                        step="0.01"
-                        readOnly
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="active"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Product Status</FormLabel>
-                    <FormDescription>
-                      {field.value ? 'Product is active and visible' : 'Product is inactive and hidden'}
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  onOpenChange(false);
-                  onClose();
-                }}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={createProduct.isPending || updateProduct.isPending}
-              >
-                {createProduct.isPending || updateProduct.isPending 
-                  ? 'Saving...'
-                  : editingProduct ? 'Update Product' : 'Create Product'
-                }
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : product ? 'Save Changes' : 'Add Product'}
               </Button>
             </DialogFooter>
           </form>
@@ -328,6 +391,4 @@ const ProductDialog = ({ open, onOpenChange, editingProduct, onClose }: ProductD
       </DialogContent>
     </Dialog>
   );
-};
-
-export default ProductDialog;
+}

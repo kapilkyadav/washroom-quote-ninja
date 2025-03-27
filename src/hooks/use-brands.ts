@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -39,11 +39,10 @@ export const useBrands = (searchQuery = '') => {
       const { data, error } = await supabase
         .from('brands')
         .insert(brand)
-        .select('*')
-        .single();
+        .select();
       
       if (error) throw error;
-      return data as BrandData;
+      return data?.[0] as BrandData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brands'] });
@@ -71,11 +70,10 @@ export const useBrands = (searchQuery = '') => {
         .from('brands')
         .update(updates)
         .eq('id', id)
-        .select('*')
-        .single();
+        .select();
       
       if (error) throw error;
-      return data as BrandData;
+      return data?.[0] as BrandData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brands'] });

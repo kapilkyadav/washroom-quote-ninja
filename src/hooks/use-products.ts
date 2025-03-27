@@ -19,7 +19,7 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('*, brands(name)')
+        .select('*')
         .order('name');
       
       if (searchQuery) {
@@ -33,7 +33,7 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as (ProductData & { brands: { name: string } })[];
+      return data as ProductData[];
     }
   });
 
@@ -43,11 +43,10 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
       const { data, error } = await supabase
         .from('products')
         .insert(product)
-        .select('*')
-        .single();
+        .select();
       
       if (error) throw error;
-      return data as ProductData;
+      return data?.[0] as ProductData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -75,11 +74,10 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
         .from('products')
         .update(updates)
         .eq('id', id)
-        .select('*')
-        .single();
+        .select();
       
       if (error) throw error;
-      return data as ProductData;
+      return data?.[0] as ProductData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -126,13 +124,13 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
     }
   });
 
-  // Bulk create products
-  const bulkCreateProducts = useMutation({
+  // Bulk import products
+  const importProducts = useMutation({
     mutationFn: async (products: Omit<ProductData, 'id' | 'created_at' | 'updated_at'>[]) => {
       const { data, error } = await supabase
         .from('products')
         .insert(products)
-        .select('*');
+        .select();
       
       if (error) throw error;
       return data as ProductData[];
@@ -162,6 +160,6 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
     createProduct,
     updateProduct,
     deleteProduct,
-    bulkCreateProducts
+    importProducts
   };
 };
