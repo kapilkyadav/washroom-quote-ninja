@@ -1,4 +1,3 @@
-
 import type { Json } from './database.types';
 
 export interface CalculatorFormData {
@@ -116,6 +115,46 @@ export interface Product {
   stock: number;
   image_url?: string;
   active: boolean;
+}
+
+export interface BrandData {
+  id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductData {
+  id: number;
+  brand_id: number;
+  name: string;
+  sku?: string;
+  description?: string;
+  client_price: number;
+  quotation_price: number;
+  margin: number;
+  extra_data?: Record<string, any>;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImportConfiguration {
+  id: number;
+  name: string;
+  source_type: 'google_sheet' | 'excel' | 'csv';
+  source_url?: string;
+  column_mappings: Record<string, string>;
+  last_used: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ColumnMapping {
+  sourceColumn: string;
+  targetField: keyof ProductData | 'extra_data';
+  isRequired?: boolean;
 }
 
 export interface DataImportConfig {

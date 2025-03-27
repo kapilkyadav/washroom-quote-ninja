@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      brands: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fixtures: {
         Row: {
           created_at: string | null
@@ -41,6 +65,92 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      import_configurations: {
+        Row: {
+          column_mappings: Json
+          created_at: string
+          id: number
+          last_used: string
+          name: string
+          source_type: string
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          column_mappings?: Json
+          created_at?: string
+          id?: number
+          last_used?: string
+          name: string
+          source_type: string
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          column_mappings?: Json
+          created_at?: string
+          id?: number
+          last_used?: string
+          name?: string
+          source_type?: string
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          active: boolean
+          brand_id: number | null
+          client_price: number
+          created_at: string
+          description: string | null
+          extra_data: Json | null
+          id: number
+          margin: number
+          name: string
+          quotation_price: number
+          sku: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand_id?: number | null
+          client_price?: number
+          created_at?: string
+          description?: string | null
+          extra_data?: Json | null
+          id?: number
+          margin?: number
+          name: string
+          quotation_price?: number
+          sku?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand_id?: number | null
+          client_price?: number
+          created_at?: string
+          description?: string | null
+          extra_data?: Json | null
+          id?: number
+          margin?: number
+          name?: string
+          quotation_price?: number
+          sku?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

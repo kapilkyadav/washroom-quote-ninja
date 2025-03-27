@@ -19,6 +19,7 @@ import DataImportTab from '@/components/admin/DataImportTab';
 import SettingsTab from '@/components/admin/SettingsTab';
 import FixturePricingTab from '@/components/admin/FixturePricingTab';
 import SubmissionsTab from '@/components/admin/SubmissionsTab';
+import BrandsProductsTab from '@/components/admin/BrandsProductsTab';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -34,7 +35,8 @@ const Admin = () => {
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'submissions', label: 'Quote Submissions', icon: FileSpreadsheet },
     { id: 'projects', label: 'Projects', icon: Package },
-    { id: 'brands', label: 'Brands & Products', icon: ShoppingCart },
+    { id: 'brands-products', label: 'Brands & Products', icon: ShoppingCart },
+    { id: 'brands', label: 'Legacy Brands', icon: ShoppingCart },
     { id: 'fixtures', label: 'Fixture Pricing', icon: DollarSign },
     { id: 'leads', label: 'Leads', icon: Mail },
     { id: 'users', label: 'Users', icon: Users },
@@ -51,6 +53,8 @@ const Admin = () => {
         return <SubmissionsTab searchQuery={searchQuery} />;
       case 'projects':
         return <ProjectsTab searchQuery={searchQuery} />;
+      case 'brands-products':
+        return <BrandsProductsTab searchQuery={searchQuery} />;
       case 'brands':
         return <BrandsTab searchQuery={searchQuery} />;
       case 'fixtures':
@@ -131,7 +135,7 @@ const Admin = () => {
               {tabOptions.find(tab => tab.id === activeTab)?.label || 'Dashboard'}
             </h1>
             
-            {['brands', 'projects', 'fixtures', 'leads', 'users', 'submissions'].includes(activeTab) && (
+            {['brands', 'brands-products', 'projects', 'fixtures', 'leads', 'users', 'submissions'].includes(activeTab) && (
               <div className="flex items-center gap-3">
                 <Input 
                   placeholder="Search..." 
