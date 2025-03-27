@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ChevronDown, Home, Mail, Settings, Users, FileSpreadsheet } from 'lucide-react';
+import { ChevronDown, Home, Mail, Settings, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Header from '@/components/layout/Header';
@@ -29,7 +29,7 @@ const Admin = () => {
   // Tab options for the sidebar - removed brands, products, fixtures and data import
   const tabOptions = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'submissions', label: 'Quote Submissions', icon: FileSpreadsheet },
+    { id: 'submissions', label: 'Quote Submissions', icon: Home },
     { id: 'projects', label: 'Projects', icon: Home },
     { id: 'leads', label: 'Leads', icon: Mail },
     { id: 'users', label: 'Users', icon: Users },
