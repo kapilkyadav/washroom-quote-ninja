@@ -90,9 +90,10 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
     }
   });
   
-  // Delete a fixture - simplified for now
+  // Delete a fixture
   const deleteFixture = useMutation({
     mutationFn: async (fixtureId: number) => {
+      const [isSubmitting, setIsSubmitting] = useState(false);
       setIsSubmitting(true);
       
       try {
@@ -129,7 +130,7 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
     }
   });
   
-  // Bulk update fixtures - simplified for now
+  // Bulk update fixtures
   const bulkUpdateFixtures = useMutation({
     mutationFn: async (fixtures: { id: number; name: string; fixture_id: string; type: string; description?: string | null; price: number }[]) => {
       try {
@@ -141,7 +142,7 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
           throw error;
         }
         
-        return data as Fixture[];
+        return data || [];
       } catch (error) {
         console.error('Error updating fixtures:', error);
         throw error;
