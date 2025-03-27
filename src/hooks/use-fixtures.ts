@@ -57,6 +57,7 @@ export const toFixturePricing = (fixtures: Fixture[] | null): FixturePricing => 
 export function useFixtures({ type, search }: UseFixturesProps = {}) {
   const [editingFixture, setEditingFixture] = useState<Fixture | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   
   // Fetch fixtures from Supabase
@@ -93,7 +94,6 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
   // Delete a fixture
   const deleteFixture = useMutation({
     mutationFn: async (fixtureId: number) => {
-      const [isSubmitting, setIsSubmitting] = useState(false);
       setIsSubmitting(true);
       
       try {
@@ -163,9 +163,6 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
       });
     }
   });
-  
-  // To track submission state
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Derived values
   const fixturesByType = formatFixturesByType(fixtures || null);
