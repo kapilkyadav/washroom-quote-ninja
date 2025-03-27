@@ -27,9 +27,10 @@ import {
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { BrandData, ProductData } from '@/types';
-import { useGoogleSheets, SheetData, ColumnMapping } from '@/hooks/use-google-sheets';
+import { useGoogleSheets, SheetData } from '@/hooks/use-google-sheets';
+import { useProducts } from '@/hooks/use-products';
 
-interface ImportDialogProps {
+export interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   brands: BrandData[];
@@ -48,8 +49,7 @@ export function ImportDialog({
     fetchSheetData, 
     sheetData, 
     setSheetData,
-    savedConfigs,
-    loadConfiguration,
+    importConfigs,
     isLoadingConfigs 
   } = useGoogleSheets();
   
@@ -79,7 +79,7 @@ export function ImportDialog({
       setStep('url');
       setColumnMappings({});
       setPreviewProducts([]);
-      setSheetData({ title: '', columns: [], rows: [] });
+      setSheetData({ headers: [], rows: [] });
     }
   }, [open, setSheetData]);
   
@@ -247,7 +247,7 @@ export function ImportDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sheetData.columns.map((column) => (
+              {sheetData.headers.map((column) => (
                 <TableRow key={column}>
                   <TableCell className="font-medium">{column}</TableCell>
                   <TableCell>

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
-import { ImportConfiguration, ColumnMapping, ProductData } from '@/types';
+import { ImportConfiguration, ProductData } from '@/types';
 
 export type SheetData = {
   headers: string[];
@@ -11,6 +11,12 @@ export type SheetData = {
 };
 
 export type SheetColumn = string;
+
+export interface ColumnMapping {
+  sourceColumn: string;
+  targetField: keyof ProductData | 'extra_data';
+  isRequired?: boolean;
+}
 
 export const useGoogleSheets = () => {
   const [sheetData, setSheetData] = useState<SheetData>({ headers: [], rows: [] });
@@ -98,24 +104,17 @@ export const useGoogleSheets = () => {
   // Save import configuration
   const saveImportConfiguration = useMutation({
     mutationFn: async ({ name, sourceUrl, mappings }: { name: string; sourceUrl: string; mappings: Record<string, string> }) => {
-      const config = {
-        name,
-        source_type: 'google_sheet',
-        source_url: sourceUrl,
-        column_mappings: mappings,
-      };
-      
       try {
         const { data, error } = await supabase
           .from('import_configurations')
           .insert({
-            name: config.name,
-            source_type: config.source_type,
-            source_url: config.source_url,
-            column_mappings: config.column_mappings,
+            name,
+            source_type: 'google_sheet',
+            source_url: sourceUrl,
+            column_mappings: mappings,
             last_used: new Date().toISOString()
           })
-          .select('*');
+          .select();
         
         if (error) throw error;
         return data?.[0] as ImportConfiguration;
@@ -153,10 +152,10 @@ export const useGoogleSheets = () => {
             last_used: new Date().toISOString()
           })
           .eq('id', id)
-          .select('*');
+          .select();
         
         if (error) throw error;
-        return data?.[0];
+        return data?.[0] as ImportConfiguration;
       } catch (error) {
         console.error('Error updating import configuration:', error);
         throw error;

@@ -58,7 +58,9 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
   const { data: fixtures, isLoading, error, refetch } = useQuery({
     queryKey: ['fixtures', type, search],
     queryFn: async () => {
-      let query = supabase.from('fixtures').select('*');
+      let query = supabase
+        .from('fixtures')
+        .select('*');
       
       if (type) {
         query = query.eq('type', type);

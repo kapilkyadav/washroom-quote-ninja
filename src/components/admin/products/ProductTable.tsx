@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useProducts } from '@/hooks/use-products';
+import { useBrands } from '@/hooks/use-brands';
 import { ProductData } from '@/types';
 import { Edit, MoreHorizontal, Plus, Trash, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,12 +40,14 @@ interface ProductTableProps {
 }
 
 const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
-  const { products, isLoading, deleteProduct } = useProducts(searchQuery, brandId);
+  const { products, isLoading, deleteProduct, importProducts } = useProducts(searchQuery, brandId);
+  const { brands } = useBrands();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<ProductData | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +69,15 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
     await deleteProduct.mutateAsync(productToDelete.id);
     setIsDeleteDialogOpen(false);
     setProductToDelete(null);
+  };
+  
+  const handleImportProducts = async (productsToImport: Omit<ProductData, 'id' | 'created_at' | 'updated_at'>[]) => {
+    setIsImporting(true);
+    try {
+      await importProducts.mutateAsync(productsToImport);
+    } finally {
+      setIsImporting(false);
+    }
   };
   
   // Calculate pagination
@@ -124,12 +136,12 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
                   <TableCell>{product.id}</TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.sku || '-'}</TableCell>
-                  <TableCell>{product.brands?.name || '-'}</TableCell>
+                  <TableCell>{brands?.find(b => b.id === product.brand_id)?.name || '-'}</TableCell>
                   <TableCell className="text-right">₹{product.client_price.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{product.quotation_price.toLocaleString()}</TableCell>
                   <TableCell className="text-right">{product.margin.toFixed(2)}%</TableCell>
                   <TableCell>
-                    <Badge variant={product.active ? "success" : "secondary"}>
+                    <Badge variant={product.active ? "default" : "secondary"}>
                       {product.active ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
@@ -179,7 +191,7 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
-                <PaginationPrevious />
+                <PaginationPrevious className="h-4 w-4" />
               </Button>
             </PaginationItem>
             
@@ -201,7 +213,7 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                <PaginationNext />
+                <PaginationNext className="h-4 w-4" />
               </Button>
             </PaginationItem>
           </PaginationContent>
@@ -212,7 +224,7 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
       <ProductDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        editingProduct={editingProduct}
+        product={editingProduct}
         onClose={() => setEditingProduct(null)}
       />
       
@@ -220,6 +232,9 @@ const ProductTable = ({ searchQuery, brandId }: ProductTableProps) => {
       <ImportDialog
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
+        brands={brands || []}
+        onImport={handleImportProducts}
+        isSubmitting={isImporting}
       />
       
       {/* Delete Confirmation Dialog */}

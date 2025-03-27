@@ -17,7 +17,9 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
   } = useQuery({
     queryKey: ['products', searchQuery, brandId],
     queryFn: async () => {
-      let query = supabase.from('products');
+      let query = supabase
+        .from('products')
+        .select('*, brands(name)');
       
       if (searchQuery) {
         query = query.ilike('name', `%${searchQuery}%`);
@@ -27,9 +29,7 @@ export const useProducts = (searchQuery = '', brandId?: number) => {
         query = query.eq('brand_id', brandId);
       }
       
-      const { data, error } = await query
-        .select('*, brands(name)')
-        .order('name');
+      const { data, error } = await query.order('name');
       
       if (error) throw error;
       return data as (ProductData & { brands: { name: string } })[];

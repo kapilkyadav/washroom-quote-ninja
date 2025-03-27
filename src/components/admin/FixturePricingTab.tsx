@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Plus, Save } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFixtures } from '@/hooks/use-fixtures';
@@ -17,7 +17,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     fixturesByType,
     isLoading,
     deleteFixture
-  } = useFixtures();
+  } = useFixtures({ search: searchQuery });
 
   const {
     createFixture,
@@ -127,7 +127,7 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     const filteredFixtures = fixturesOfType
       .filter(fixture => 
         fixture.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        fixture.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        (fixture.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
       );
       
     // Convert to the expected format for FixtureTypeTab
