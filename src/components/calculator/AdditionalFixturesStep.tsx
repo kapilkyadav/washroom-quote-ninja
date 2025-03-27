@@ -1,10 +1,10 @@
 
-import { useEffect, useState } from 'react';
-import { CalculatorFormData, FixturePricing } from '@/types';
+import { useEffect } from 'react';
+import { CalculatorFormData } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Droplets, Bath, ShowerHead, Waves } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useFixtures } from '@/hooks/use-fixtures';
 
 interface AdditionalFixturesStepProps {
   formData: CalculatorFormData;
@@ -12,60 +12,8 @@ interface AdditionalFixturesStepProps {
 }
 
 const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixturesStepProps) => {
-  const [fixtures, setFixtures] = useState<FixturePricing>({
-    showerPartition: {
-      name: 'Shower Partition',
-      price: 15000,
-      description: 'Glass shower partition with frame'
-    },
-    vanity: {
-      name: 'Vanity',
-      price: 25000,
-      description: 'Modern bathroom vanity with storage'
-    },
-    bathtub: {
-      name: 'Bathtub',
-      price: 35000,
-      description: 'Luxurious freestanding bathtub'
-    },
-    jacuzzi: {
-      name: 'Jacuzzi',
-      price: 55000,
-      description: 'Premium jacuzzi with massage jets'
-    }
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchBathroomFixtures();
-  }, []);
-
-  const fetchBathroomFixtures = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('fixtures')
-        .select('*')
-        .eq('type', 'bathroom');
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const fixturesObj: FixturePricing = {};
-        data.forEach(item => {
-          fixturesObj[item.fixture_id] = {
-            name: item.name,
-            price: item.price,
-            description: item.description || undefined
-          };
-        });
-        setFixtures(fixturesObj);
-      }
-    } catch (error) {
-      console.error('Error fetching bathroom fixtures:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use the fixtures hook to fetch bathroom fixtures
+  const { fixtures, isLoading, fixturePricing } = useFixtures({ type: 'bathroom' });
 
   const handleCheckboxChange = (fixture: keyof typeof formData.additionalFixtures) => {
     const updatedFixtures = {
@@ -104,7 +52,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
       <h2 className="heading-2 text-center mb-8">Additional Fixtures</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        {Object.entries(fixtures).map(([id, fixture]) => (
+        {Object.entries(fixturePricing).map(([id, fixture]) => (
           <div 
             key={id}
             className={`glass-card rounded-xl p-6 transition-all duration-300 ${
@@ -120,7 +68,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
               <div className="flex items-center">
                 <Checkbox 
                   id={id}
-                  checked={formData.additionalFixtures[id as keyof typeof formData.additionalFixtures]}
+                  checked={formData.additionalFixtures[id as keyof typeof formData.additionalFixtures] || false}
                   onCheckedChange={() => handleCheckboxChange(id as keyof typeof formData.additionalFixtures)}
                   className="mr-2"
                 />
@@ -144,7 +92,7 @@ const AdditionalFixturesStep = ({ formData, updateFormData }: AdditionalFixtures
               .filter(([_, isSelected]) => isSelected)
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
-                  <span>{fixtures[fixture]?.name || fixture}</span>
+                  <span>{fixturePricing[fixture]?.name || fixture}</span>
                   {/* Don't show prices to customers */}
                 </li>
               ))}

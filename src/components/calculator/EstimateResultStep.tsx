@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Copy, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/card';
 import { CalculatorFormData, Brand, EstimateBreakdown, CalcSubmission, DbSubmission, Json } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { useFixtures } from '@/hooks/use-fixtures';
 
 interface EstimateResultStepProps {
   formData: CalculatorFormData;
@@ -48,32 +48,32 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
     totalTilingCost: 0,
     total: 0
   });
+  
+  const { fixturePricing: electricalFixtures } = useFixtures({ type: 'electrical' });
+  const { fixturePricing: bathroomFixtures } = useFixtures({ type: 'bathroom' });
+  
   const [brands, setBrands] = useState<Record<string, Brand>>({
     'premium': { id: 'premium', name: 'Premium', clientPrice: 1.3, quotationPrice: 1.35, margin: 1.05 },
     'standard': { id: 'standard', name: 'Standard', clientPrice: 1, quotationPrice: 1.05, margin: 1.05 },
     'budget': { id: 'budget', name: 'Budget', clientPrice: 0.9, quotationPrice: 0.95, margin: 1.05 }
   });
-  const [electricalFixtures, setElectricalFixtures] = useState<Record<string, number>>({});
-  const [bathroomFixtures, setBathroomFixtures] = useState<Record<string, number>>({});
+  
   const [calculatorSettings, setCalculatorSettings] = useState({
     plumbingRatePerSqFt: 50,
     tileCostPerUnit: 80,
     tilingLaborRate: 85
   });
 
-  // Fetch all required data on component mount
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Calculate estimate when data is loaded and when form data changes
   useEffect(() => {
     calculateEstimate();
   }, [formData, electricalFixtures, bathroomFixtures, calculatorSettings]);
 
   const fetchData = async () => {
     try {
-      // Fetch calculator settings
       const { data: settingsData, error: settingsError } = await supabase
         .from('settings')
         .select()
@@ -88,34 +88,6 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
           tilingLaborRate: settings.tilingLaborRate || 85,
         });
       }
-
-      // Fetch electrical fixtures
-      const { data: electricalData, error: electricalError } = await supabase
-        .from('fixtures')
-        .select()
-        .eq('type', 'electrical');
-      
-      if (!electricalError && electricalData) {
-        const fixtures: Record<string, number> = {};
-        electricalData.forEach(item => {
-          fixtures[item.fixture_id] = item.price;
-        });
-        setElectricalFixtures(fixtures);
-      }
-
-      // Fetch bathroom fixtures
-      const { data: bathroomData, error: bathroomError } = await supabase
-        .from('fixtures')
-        .select()
-        .eq('type', 'bathroom');
-      
-      if (!bathroomError && bathroomData) {
-        const fixtures: Record<string, number> = {};
-        bathroomData.forEach(item => {
-          fixtures[item.fixture_id] = item.price;
-        });
-        setBathroomFixtures(fixtures);
-      }
     } catch (error) {
       console.error('Error fetching data for estimate calculation:', error);
     }
@@ -124,39 +96,33 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
   const calculateEstimate = () => {
     const { length, width, height } = formData.dimensions;
     
-    // Calculate areas
     const floorArea = length * width;
     const wallArea = 2 * (length + width) * height;
     const totalArea = floorArea + wallArea;
     
-    // Calculate tile quantities with 10% extra for breakage
-    const tileQuantityInitial = Math.ceil(totalArea / 4); // Each tile covers 4 sq ft
+    const tileQuantityInitial = Math.ceil(totalArea / 4);
     const tileQuantityWithBreakage = Math.ceil(tileQuantityInitial * 1.1);
     
-    // Calculate material and labor costs for tiling
     const tileMaterialCost = tileQuantityWithBreakage * calculatorSettings.tileCostPerUnit;
     const tilingLaborCost = totalArea * calculatorSettings.tilingLaborRate;
     const totalTilingCost = tileMaterialCost + tilingLaborCost;
     
-    // Calculate base price
     const basePrice = totalTilingCost;
     
-    // Calculate other components
     let electricalFixturesPrice = 0;
     Object.entries(formData.electricalFixtures).forEach(([key, isSelected]) => {
       if (isSelected && electricalFixtures[key]) {
-        electricalFixturesPrice += electricalFixtures[key];
+        electricalFixturesPrice += electricalFixtures[key].price;
       }
     });
     
     let additionalFixturesPrice = 0;
     Object.entries(formData.additionalFixtures).forEach(([key, isSelected]) => {
       if (isSelected && bathroomFixtures[key]) {
-        additionalFixturesPrice += bathroomFixtures[key];
+        additionalFixturesPrice += bathroomFixtures[key].price;
       }
     });
     
-    // Calculate plumbing price
     let plumbingPrice = 0;
     if (formData.plumbingRequirements === 'complete') {
       plumbingPrice = floorArea * calculatorSettings.plumbingRatePerSqFt;
@@ -164,20 +130,16 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
       plumbingPrice = floorArea * calculatorSettings.plumbingRatePerSqFt * 0.6;
     }
     
-    // Apply brand premium
     const brandMultiplier = brands[formData.brandSelection]?.clientPrice || 1;
     const brandPremium = (basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice) * (brandMultiplier - 1);
     
-    // Apply timeline discount
     let timelineDiscount = 0;
     if (formData.projectTimeline === 'flexible') {
       timelineDiscount = (basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium) * 0.05;
     }
     
-    // Calculate total
     const total = basePrice + electricalFixturesPrice + plumbingPrice + additionalFixturesPrice + brandPremium - timelineDiscount;
     
-    // Set the complete estimate breakdown
     setEstimate({
       basePrice,
       electricalFixturesPrice,
@@ -241,7 +203,6 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
   };
 
   const handleCopyToClipboard = () => {
-    // Format estimate details
     const estimateText = `
       Bathroom Renovation Estimate
       --------------------------
@@ -276,7 +237,6 @@ const EstimateResultStep = ({ formData, onSubmitAnother }: EstimateResultStepPro
     });
   };
 
-  // Function to format currency amounts
   const formatCurrency = (amount: number) => {
     return `₹${Math.round(amount).toLocaleString()}`;
   };

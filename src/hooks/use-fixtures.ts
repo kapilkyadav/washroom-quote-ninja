@@ -24,37 +24,142 @@ interface UseFixturesProps {
 
 // Format fixtures by type
 const formatFixturesByType = (fixtures: Fixture[] | null): Record<string, Fixture[]> => {
-  return {};
+  if (!fixtures || fixtures.length === 0) {
+    return {};
+  }
+
+  // Group fixtures by type
+  return fixtures.reduce((grouped, fixture) => {
+    if (!grouped[fixture.type]) {
+      grouped[fixture.type] = [];
+    }
+    grouped[fixture.type].push(fixture);
+    return grouped;
+  }, {} as Record<string, Fixture[]>);
 };
 
 // Function to convert fixtures to fixture pricing format
 export const toFixturePricing = (fixtures: Fixture[] | null): FixturePricing => {
-  return {};
+  if (!fixtures || fixtures.length === 0) {
+    return {};
+  }
+
+  return fixtures.reduce((pricing, fixture) => {
+    pricing[fixture.fixture_id] = {
+      name: fixture.name,
+      price: fixture.price,
+      description: fixture.description || undefined
+    };
+    return pricing;
+  }, {} as FixturePricing);
 };
 
 export function useFixtures({ type, search }: UseFixturesProps = {}) {
   const [editingFixture, setEditingFixture] = useState<Fixture | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
   
-  // Updated the deleteFixture mutation to not expect arguments
-  const deleteFixture = {
-    mutateAsync: async () => ({}),
-    isLoading: false,
-  };
+  // Fetch fixtures from Supabase
+  const { data: fixtures, isLoading, error, refetch } = useQuery({
+    queryKey: ['fixtures', type, search],
+    queryFn: async () => {
+      let query = supabase.from('fixtures').select('*');
+      
+      // Apply type filter if provided
+      if (type) {
+        query = query.eq('type', type);
+      }
+      
+      // Apply search filter if provided
+      if (search && search.trim() !== '') {
+        query = query.ilike('name', `%${search}%`);
+      }
+      
+      const { data, error } = await query.order('name');
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data as Fixture[];
+    }
+  });
+  
+  // Delete a fixture
+  const deleteFixture = useMutation({
+    mutationFn: async (fixtureId: number) => {
+      const { error } = await supabase
+        .from('fixtures')
+        .delete()
+        .eq('id', fixtureId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Fixture deleted",
+        description: "The fixture has been successfully deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['fixtures'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting fixture",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Bulk update fixtures
+  const bulkUpdateFixtures = useMutation({
+    mutationFn: async (fixtures: Partial<Fixture>[]) => {
+      const { data, error } = await supabase
+        .from('fixtures')
+        .upsert(fixtures)
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      return data as Fixture[];
+    },
+    onSuccess: () => {
+      toast({
+        title: "Fixtures updated",
+        description: "All fixtures have been successfully updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['fixtures'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating fixtures",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Derived values
+  const fixturesByType = formatFixturesByType(fixtures || null);
+  const fixtureTypes = Object.keys(fixturesByType);
+  const fixturePricing = toFixturePricing(fixtures || null);
   
   return {
-    fixtures: [] as Fixture[],
-    fixturesByType: {} as Record<string, Fixture[]>,
-    fixtureTypes: [] as string[],
-    fixturePricing: {} as FixturePricing,
-    isLoading: false,
-    error: null,
+    fixtures: fixtures || [],
+    fixturesByType,
+    fixtureTypes,
+    fixturePricing,
+    isLoading,
+    error,
     deleteFixture,
-    bulkUpdateFixtures: {
-      mutateAsync: async () => ([]),
-      isLoading: false,
-    },
-    refetch: () => {},
+    bulkUpdateFixtures,
+    refetch,
     editingFixture,
     isEditDialogOpen,
     openEditDialog: (fixture: Fixture) => {

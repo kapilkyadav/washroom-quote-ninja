@@ -1,10 +1,10 @@
 
-import { useEffect, useState } from 'react';
-import { CalculatorFormData, FixturePricing } from '@/types';
+import { useEffect } from 'react';
+import { CalculatorFormData } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Lightbulb, Wind, FlameKindling } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useFixtures } from '@/hooks/use-fixtures';
 
 interface ElectricalStepProps {
   formData: CalculatorFormData;
@@ -12,55 +12,8 @@ interface ElectricalStepProps {
 }
 
 const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
-  const [fixtures, setFixtures] = useState<FixturePricing>({
-    ledMirror: {
-      name: 'LED Mirror',
-      price: 3500,
-      description: 'Modern LED mirror with touch controls'
-    },
-    exhaustFan: {
-      name: 'Exhaust Fan',
-      price: 1800,
-      description: 'High-quality silent exhaust fan'
-    },
-    waterHeater: {
-      name: 'Water Heater',
-      price: 8000,
-      description: 'Energy-efficient water heater'
-    }
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchElectricalFixtures();
-  }, []);
-
-  const fetchElectricalFixtures = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('fixtures')
-        .select('*')
-        .eq('type', 'electrical');
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const fixturesObj: FixturePricing = {};
-        data.forEach(item => {
-          fixturesObj[item.fixture_id] = {
-            name: item.name,
-            price: item.price,
-            description: item.description
-          };
-        });
-        setFixtures(fixturesObj);
-      }
-    } catch (error) {
-      console.error('Error fetching electrical fixtures:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use the fixtures hook to fetch electrical fixtures
+  const { fixtures, isLoading, fixturePricing } = useFixtures({ type: 'electrical' });
 
   const handleCheckboxChange = (fixture: keyof typeof formData.electricalFixtures) => {
     const updatedFixtures = {
@@ -97,7 +50,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
       <h2 className="heading-2 text-center mb-8">Electrical Fixtures</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        {Object.entries(fixtures).map(([id, fixture]) => (
+        {Object.entries(fixturePricing).map(([id, fixture]) => (
           <div 
             key={id}
             className={`glass-card rounded-xl p-6 transition-all duration-300 ${
@@ -113,7 +66,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
               <div className="flex items-center">
                 <Checkbox 
                   id={id}
-                  checked={formData.electricalFixtures[id as keyof typeof formData.electricalFixtures]}
+                  checked={formData.electricalFixtures[id as keyof typeof formData.electricalFixtures] || false}
                   onCheckedChange={() => handleCheckboxChange(id as keyof typeof formData.electricalFixtures)}
                   className="mr-2"
                 />
@@ -137,7 +90,7 @@ const ElectricalStep = ({ formData, updateFormData }: ElectricalStepProps) => {
               .filter(([_, isSelected]) => isSelected)
               .map(([fixture]) => (
                 <li key={fixture} className="flex justify-between">
-                  <span>{fixtures[fixture]?.name || fixture}</span>
+                  <span>{fixturePricing[fixture]?.name || fixture}</span>
                   {/* Don't show prices to customers */}
                 </li>
               ))}
