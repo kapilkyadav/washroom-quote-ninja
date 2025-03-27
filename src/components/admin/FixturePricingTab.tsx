@@ -117,8 +117,8 @@ const FixturePricingTab = ({ searchQuery }: FixturePricingTabProps) => {
     const fixture = fixtures?.find(f => f.fixture_id === id);
     if (!fixture) return;
     
-    // Updated from deleteFixture.mutateAsync(fixture.id) to not pass any arguments
-    await deleteFixture.mutateAsync();
+    // Pass the fixture ID to the deleteFixture mutation
+    await deleteFixture.mutateAsync(fixture.id);
   };
 
   // Get fixtures by type and filter by search query

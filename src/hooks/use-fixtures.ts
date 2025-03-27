@@ -63,41 +63,55 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
   const { data: fixtures, isLoading, error, refetch } = useQuery({
     queryKey: ['fixtures', type, search],
     queryFn: async () => {
-      let query = supabase.from('fixtures').select('*');
-      
-      // Apply type filter if provided
-      if (type) {
-        query = query.eq('type', type);
+      try {
+        let query = supabase.from('fixtures').select('*');
+        
+        // Apply type filter if provided
+        if (type) {
+          query = query.eq('type', type);
+        }
+        
+        // Apply search filter if provided
+        if (search && search.trim() !== '') {
+          query = query.ilike('name', `%${search}%`);
+        }
+        
+        const { data, error } = await query.order('name');
+        
+        if (error) {
+          throw error;
+        }
+        
+        return data as Fixture[];
+      } catch (error) {
+        console.error('Error fetching fixtures:', error);
+        return [] as Fixture[];
       }
-      
-      // Apply search filter if provided
-      if (search && search.trim() !== '') {
-        query = query.ilike('name', `%${search}%`);
-      }
-      
-      const { data, error } = await query.order('name');
-      
-      if (error) {
-        throw error;
-      }
-      
-      return data as Fixture[];
     }
   });
   
-  // Delete a fixture
+  // Delete a fixture - simplified for now
   const deleteFixture = useMutation({
     mutationFn: async (fixtureId: number) => {
-      const { error } = await supabase
-        .from('fixtures')
-        .delete()
-        .eq('id', fixtureId);
-        
-      if (error) {
-        throw error;
-      }
+      setIsSubmitting(true);
       
-      return { success: true };
+      try {
+        const { error } = await supabase
+          .from('fixtures')
+          .delete()
+          .eq('id', fixtureId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        return { success: true };
+      } catch (error) {
+        console.error('Error deleting fixture:', error);
+        throw error;
+      } finally {
+        setIsSubmitting(false);
+      }
     },
     onSuccess: () => {
       toast({
@@ -109,25 +123,29 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
     onError: (error) => {
       toast({
         title: "Error deleting fixture",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     }
   });
   
-  // Bulk update fixtures
+  // Bulk update fixtures - simplified for now
   const bulkUpdateFixtures = useMutation({
-    mutationFn: async (fixtures: Partial<Fixture>[]) => {
-      const { data, error } = await supabase
-        .from('fixtures')
-        .upsert(fixtures)
-        .select();
+    mutationFn: async (fixtures: { id: number; name: string; fixture_id: string; type: string; description?: string | null; price: number }[]) => {
+      try {
+        const { data, error } = await supabase
+          .from('fixtures')
+          .upsert(fixtures);
+          
+        if (error) {
+          throw error;
+        }
         
-      if (error) {
+        return data as Fixture[];
+      } catch (error) {
+        console.error('Error updating fixtures:', error);
         throw error;
       }
-      
-      return data as Fixture[];
     },
     onSuccess: () => {
       toast({
@@ -139,11 +157,14 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
     onError: (error) => {
       toast({
         title: "Error updating fixtures",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     }
   });
+  
+  // To track submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Derived values
   const fixturesByType = formatFixturesByType(fixtures || null);
@@ -162,6 +183,7 @@ export function useFixtures({ type, search }: UseFixturesProps = {}) {
     refetch,
     editingFixture,
     isEditDialogOpen,
+    isSubmitting,
     openEditDialog: (fixture: Fixture) => {
       setEditingFixture(fixture);
       setIsEditDialogOpen(true);

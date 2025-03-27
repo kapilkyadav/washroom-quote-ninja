@@ -17,15 +17,30 @@ export function useFixtureEditing() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
-  // Create new fixture - simplified placeholder
+  // Create new fixture
   const createFixture = useMutation({
     mutationFn: async (formData: FixtureFormData) => {
       setIsSubmitting(true);
       
       try {
-        // In a real implementation, we would call Supabase here
-        // For now, just return mock data
-        return {};
+        const { data, error } = await supabase
+          .from('fixtures')
+          .insert({
+            name: formData.name,
+            fixture_id: formData.fixture_id,
+            type: formData.type,
+            description: formData.description || null,
+            price: formData.price
+          });
+        
+        if (error) {
+          throw error;
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Error creating fixture:', error);
+        throw error;
       } finally {
         setIsSubmitting(false);
       }
@@ -47,15 +62,32 @@ export function useFixtureEditing() {
     }
   });
 
-  // Update existing fixture - simplified placeholder
+  // Update existing fixture
   const updateFixture = useMutation({
     mutationFn: async ({ id, formData }: { id: number; formData: FixtureFormData }) => {
       setIsSubmitting(true);
       
       try {
-        // In a real implementation, we would call Supabase here
-        // For now, just return mock data
-        return {};
+        const { data, error } = await supabase
+          .from('fixtures')
+          .update({
+            name: formData.name,
+            fixture_id: formData.fixture_id,
+            type: formData.type,
+            description: formData.description || null,
+            price: formData.price,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id);
+        
+        if (error) {
+          throw error;
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Error updating fixture:', error);
+        throw error;
       } finally {
         setIsSubmitting(false);
       }
